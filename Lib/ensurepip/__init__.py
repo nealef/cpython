@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 import collections
 import os
 import os.path
@@ -42,7 +48,7 @@ def _find_packages(path):
     # comparison since this case should not happen.
     filenames = sorted(filenames)
     for filename in filenames:
-        # filename is like 'pip-21.2.4-py3-none-any.whl'
+        # filename is like 'pip-20.2.3-py2.py3-none-any.whl'
         if not filename.endswith(".whl"):
             continue
         for name in _PACKAGE_NAMES:
@@ -52,7 +58,7 @@ def _find_packages(path):
         else:
             continue
 
-        # Extract '21.2.4' from 'pip-21.2.4-py3-none-any.whl'
+        # Extract '20.2.2' from 'pip-20.2.2-py2.py3-none-any.whl'
         version = filename.removeprefix(prefix).partition('-')[0]
         wheel_path = os.path.join(path, filename)
         packages[name] = _Package(version, None, wheel_path)

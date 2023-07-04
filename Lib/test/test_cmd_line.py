@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 # Tests invocation of the interpreter with various command line arguments
 # Most tests are executed with environment variables ignored
 # See test_cmd_line_script.py for testing of script execution
@@ -370,9 +376,8 @@ class CmdLineTest(unittest.TestCase):
             self.assertIn(escaped, data)
 
     def check_input(self, code, expected):
-        with tempfile.NamedTemporaryFile("wb+") as stdin:
-            sep = os.linesep.encode('ASCII')
-            stdin.write(sep.join((b'abc', b'def')))
+        with tempfile.NamedTemporaryFile("w+") as stdin:
+            stdin.write('abc' + os.linesep + 'def')
             stdin.flush()
             stdin.seek(0)
             with subprocess.Popen(
@@ -910,10 +915,9 @@ class SyntaxErrorTests(unittest.TestCase):
     def test_decoding_error_at_the_end_of_the_line(self):
         self.check_string(br"'\u1f'")
 
-
-def tearDownModule():
+def test_main():
+    support.run_unittest(CmdLineTest, IgnoreEnvironmentTest, SyntaxErrorTests)
     support.reap_children()
 
-
 if __name__ == "__main__":
-    unittest.main()
+    test_main()

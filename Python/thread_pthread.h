@@ -249,7 +249,11 @@ pythread_wrapper(void *arg)
     return NULL;
 }
 
+#ifdef __MVS__
+uint64_t
+#else
 unsigned long
+#endif
 PyThread_start_new_thread(void (*func)(void *), void *arg)
 {
     pthread_t th;
@@ -310,12 +314,16 @@ PyThread_start_new_thread(void (*func)(void *), void *arg)
         return PYTHREAD_INVALID_THREAD_ID;
     }
 
-    pthread_detach(th);
+    pthread_detach(&th);
 
+#ifdef __MVS__
+    return (uint64_t) *(uint64_t *) &th.__;
+#else
 #if SIZEOF_PTHREAD_T <= SIZEOF_LONG
     return (unsigned long) th;
 #else
     return (unsigned long) *(unsigned long *) &th;
+#endif
 #endif
 }
 
@@ -325,14 +333,22 @@ PyThread_start_new_thread(void (*func)(void *), void *arg)
      - The cast to unsigned long is inherently unsafe.
      - It is not clear that the 'volatile' (for AIX?) are any longer necessary.
 */
+#ifdef __MVS__
+uint64_t
+#else
 unsigned long
+#endif
 PyThread_get_thread_ident(void)
 {
     volatile pthread_t threadid;
     if (!initialized)
         PyThread_init_thread();
     threadid = pthread_self();
+#ifdef __MVS__
+    return (uint64_t) *(uint64_t *) &threadid.__;
+#else
     return (unsigned long) threadid;
+#endif
 }
 
 #ifdef PY_HAVE_THREAD_NATIVE_ID
@@ -925,5 +941,11 @@ void *
 PyThread_tss_get(Py_tss_t *key)
 {
     assert(key != NULL);
+#ifdef __MVS__
+    char *val;
+    pthread_getspecific(key->_key, &val);
+    return val;
+#else
     return pthread_getspecific(key->_key);
+#endif
 }

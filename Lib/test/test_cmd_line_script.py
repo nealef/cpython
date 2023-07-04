@@ -753,9 +753,10 @@ class CmdLineTest(unittest.TestCase):
 
 
 
-def tearDownModule():
+def test_main():
+    support.run_unittest(CmdLineTest)
     support.reap_children()
 
 
 if __name__ == '__main__':
-    unittest.main()
+    test_main()

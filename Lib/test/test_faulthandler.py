@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 from contextlib import contextmanager
 import datetime
 import faulthandler
@@ -66,6 +72,12 @@ class FaultHandlerTests(unittest.TestCase):
                 output, stderr = process.communicate()
                 exitcode = process.wait()
         output = output.decode('ascii', 'backslashreplace')
+
+        # On signals that are uncatchable, e.g. segfaults, the error is printed to
+        # both stdout and stderr. Remove it from stderr to match other platforms
+        if sys.platform == 'zos' or sys.platform == 'zvm':
+            output = re.sub(r"CEE\S+\sThe signal \S+ was received.", "", output).strip()
+
         if filename:
             self.assertEqual(output, '')
             with open(filename, "rb") as fp:

@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 # Adapted from test_file.py by Daniel Stutzbach
 
 import sys
@@ -9,7 +15,7 @@ from array import array
 from weakref import proxy
 from functools import wraps
 
-from test.support import cpython_only, swap_attr, gc_collect
+from test.support import (run_unittest, cpython_only, swap_attr)
 from test.support.os_helper import (TESTFN, TESTFN_UNICODE, make_bad_fd)
 from test.support.warnings_helper import check_warnings
 from collections import UserList
@@ -36,7 +42,6 @@ class AutoFileTests:
         self.assertEqual(self.f.tell(), p.tell())
         self.f.close()
         self.f = None
-        gc_collect()  # For PyPy or other GCs.
         self.assertRaises(ReferenceError, getattr, p, 'tell')
 
     def testSeekTell(self):
@@ -386,6 +391,7 @@ class OtherFileTests:
                     self.assertEqual(f.writable(), True)
                     if sys.platform != "darwin" and \
                        'bsd' not in sys.platform and \
+                        sys.platform != 'zos' or sys.platform == 'zvm' and \
                        not sys.platform.startswith(('sunos', 'aix')):
                         # Somehow /dev/tty appears seekable on some BSDs
                         self.assertEqual(f.seekable(), False)
@@ -606,12 +612,15 @@ class PyOtherFileTests(OtherFileTests, unittest.TestCase):
             self.assertNotEqual(w.warnings, [])
 
 
-def tearDownModule():
+def test_main():
     # Historically, these tests have been sloppy about removing TESTFN.
     # So get rid of it no matter what.
+    try:
+        run_unittest(CAutoFileTests, PyAutoFileTests,
+                     COtherFileTests, PyOtherFileTests)
+    finally:
     if os.path.exists(TESTFN):
         os.unlink(TESTFN)
 
-
 if __name__ == '__main__':
-    unittest.main()
+    test_main()

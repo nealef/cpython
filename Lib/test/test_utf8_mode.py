@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """
 Test the implementation of the PEP 540: the UTF-8 Mode.
 """
@@ -229,7 +235,7 @@ class UTF8ModeTests(unittest.TestCase):
 
         if sys.platform == 'darwin' or support.is_android or VXWORKS:
             c_arg = arg_utf8
-        elif sys.platform.startswith("aix"):
+        elif sys.platform.startswith("aix") or sys.platform == 'zos' or sys.platform == 'zvm':
             c_arg = arg.decode('iso-8859-1')
         else:
             c_arg = arg_ascii

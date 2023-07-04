@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 #-------------------------------------------------------------------
 # tarfile.py
 #-------------------------------------------------------------------
@@ -48,6 +55,10 @@ import copy
 import re
 import warnings
 
+if sys.platform == 'zos' or sys.platform == 'zvm' :
+    #Hard requirement in order to get USTAR to work on zos.
+    import codecs
+    import zos_util
 try:
     import pwd
 except ImportError:
@@ -95,6 +106,7 @@ BLKTYPE = b"4"                  # block special device
 DIRTYPE = b"5"                  # directory
 FIFOTYPE = b"6"                 # fifo special device
 CONTTYPE = b"7"                 # contiguous file
+OS390HEADERTYPE = b"S"           # special header file to store OS390 and z/OS extended attributes
 
 GNUTYPE_LONGNAME = b"L"         # GNU tar longname
 GNUTYPE_LONGLINK = b"K"         # GNU tar longlink
@@ -113,11 +125,18 @@ DEFAULT_FORMAT = PAX_FORMAT
 # tarfile constants
 #---------------------------------------------------------
 # File types that tarfile supports:
-SUPPORTED_TYPES = (REGTYPE, AREGTYPE, LNKTYPE,
-                   SYMTYPE, DIRTYPE, FIFOTYPE,
-                   CONTTYPE, CHRTYPE, BLKTYPE,
-                   GNUTYPE_LONGNAME, GNUTYPE_LONGLINK,
-                   GNUTYPE_SPARSE)
+if sys.platform == 'zos' or sys.platform == 'zvm' :
+    SUPPORTED_TYPES = (REGTYPE, AREGTYPE, LNKTYPE,
+                       SYMTYPE, DIRTYPE, FIFOTYPE,
+                       CONTTYPE, CHRTYPE, BLKTYPE,
+                       GNUTYPE_LONGNAME, GNUTYPE_LONGLINK,
+                       GNUTYPE_SPARSE, OS390HEADERTYPE)
+else:
+    SUPPORTED_TYPES = (REGTYPE, AREGTYPE, LNKTYPE,
+                       SYMTYPE, DIRTYPE, FIFOTYPE,
+                       CONTTYPE, CHRTYPE, BLKTYPE,
+                       GNUTYPE_LONGNAME, GNUTYPE_LONGLINK,
+                       GNUTYPE_SPARSE)
 
 # File types that will be treated as a regular file.
 REGULAR_TYPES = (REGTYPE, AREGTYPE,
@@ -127,9 +146,16 @@ REGULAR_TYPES = (REGTYPE, AREGTYPE,
 GNU_TYPES = (GNUTYPE_LONGNAME, GNUTYPE_LONGLINK,
              GNUTYPE_SPARSE)
 
+# File types to hold OS390, z/OS extended file attributes.
+OS390_HEADER_TYPES = (OS390HEADERTYPE)
+
 # Fields from a pax header that override a TarInfo attribute.
 PAX_FIELDS = ("path", "linkpath", "size", "mtime",
               "uid", "gid", "uname", "gname")
+
+# Extra pax header field from z/OS.
+ZOS_PAX_FIELDS = ("ZOS.acls", "ZOS.taginfo", "ZOS.useraudit", "ZOS.auditoraudit",
+                  "ZOS.filefmt", "ZOS.extattr")
 
 # Fields from a pax header that are affected by hdrcharset.
 PAX_NAME_FIELDS = {"path", "linkpath", "uname", "gname"}
@@ -144,6 +170,29 @@ PAX_NUMBER_FIELDS = {
     "gid": int,
     "size": int
 }
+
+# HEADER for the OS390, z/OS special header files.
+OS390_USTAR_HEADER = \
+"""#00#IBMOS390_USTAR_VERS=1
+#01#COMMENT=This is a special header file created by tarfile.py for z/OS
+#01#COMMENT=and OS/390. It's purpose is to store in the archive a
+#01#COMMENT=file, or specific attributes of a file, that could not 
+#01#COMMENT=otherwise be stored due to limitations in the USTAR format.
+#01#COMMENT=For versions of pax and tar that are not capable of
+#01#COMMENT=processing this file, the last special header file in this
+#01#COMMENT=archive contains information describing how a user can
+#01#COMMENT=manually restore the file or attribute(s) described in this
+#01#COMMENT=and all other special headers contained in this archive.
+#
+"""
+# OS390 special header file path prefix (the suffix is the timestamp as integer).
+OS390_PATH_PREFIX = \
+"/tmp/IBMOS390_USTAR_SUMMARY_"
+#Keywords for special header files.
+OS390_APPLYTO_KEYWORD = \
+"#02#APPLYTO"
+OS390_TAGINFO_KEYWORD = \
+"#07#TAGINFO"
 
 #---------------------------------------------------------
 # initialization
@@ -236,7 +285,7 @@ def calc_chksums(buf):
     signed_chksum = 256 + sum(struct.unpack_from("148b8x356b", buf))
     return unsigned_chksum, signed_chksum
 
-def copyfileobj(src, dst, length=None, exception=OSError, bufsize=None):
+def copyfileobj(src, dst, length=None, exception=OSError, bufsize=None, tag=True):
     """Copy length bytes from fileobj src to fileobj dst.
        If length is None, copy the entire content.
     """
@@ -247,8 +296,29 @@ def copyfileobj(src, dst, length=None, exception=OSError, bufsize=None):
         shutil.copyfileobj(src, dst, bufsize)
         return
 
+    buf = None
+    has_been_tagged = False
+    if sys.platform == 'zos' and hasattr(dst, 'name') and tag:
+        read_length = min(bufsize, length)
+
+        buf = src.read(read_length)
+        if len(buf) < read_length:
+            raise exception("unexpected end of data")
+        dst.write(buf)
+        # If it's not flushed, the characters might get converted
+        dst.flush()
+
+        ccsid = os.get_tagging(buf[:64])
+        if ccsid == -1 and len(buf) > 64:
+            ccsid = os.get_tagging(buf[-64:])
+
+        if ccsid > 0:
+            has_been_tagged = True
+        os.set_tagging(dst.name, ccsid)
+        length = length - read_length
+
     blocks, remainder = divmod(length, bufsize)
-    for b in range(blocks):
+    for b in range(0, blocks):
         buf = src.read(bufsize)
         if len(buf) < bufsize:
             raise exception("unexpected end of data")
@@ -259,6 +329,14 @@ def copyfileobj(src, dst, length=None, exception=OSError, bufsize=None):
         if len(buf) < remainder:
             raise exception("unexpected end of data")
         dst.write(buf)
+    
+    if sys.platform == 'zos' and hasattr(dst, 'name') and buf != None and tag and not has_been_tagged:
+        # If it's not flushed, the characters might get converted
+        dst.flush()
+
+        ccsid = os.get_tagging(buf[-64:])
+        os.set_tagging(dst.name, ccsid)
+
     return
 
 def _safe_print(s):
@@ -868,6 +946,14 @@ class TarInfo(object):
         _sparse_structs = None,
         _link_target = None,
         )
+    # Extra attributes for z/OS
+    if sys.platform == 'zos':
+        __slots__['acls'] = 'Extended access control list.'
+        __slots__['taginfo'] = 'File encoding tag infomation.'
+        __slots__['useraudit'] = 'User-requested audit attributes.'
+        __slots__['auditoraudit'] = 'Auditor-requested audit attributes.'
+        __slots__['filefmt'] = 'Specifies file format and text data delimiters.'
+        __slots__['extattr'] = 'Extra attributes for APF-authorization.'
 
     def __init__(self, name=""):
         """Construct a TarInfo object. name is the optional name
@@ -892,6 +978,15 @@ class TarInfo(object):
 
         self.sparse = None      # sparse member information
         self.pax_headers = {}   # pax header information
+
+        # Extra attributes for z/OS
+        if sys.platform == 'zos':
+            self.acls = "" #Extended access constrol list.
+            self.taginfo = "" #File tag info.
+            self.useraudit = "" #User requested audit
+            self.auditoraudit = "" #Auditor-requested audit.
+            self.filefmt = "" #File format and delimiter.
+            self.extattr = "" #APF authorization related attributes.
 
     @property
     def path(self):
@@ -965,6 +1060,14 @@ class TarInfo(object):
             "devminor": self.devminor
         }
 
+        if sys.platform == 'zos':
+            info["acls"] = self.acls
+            info["taginfo"] = self.taginfo
+            info["useraudit"] = self.useraudit
+            info["auditoraudit"] = self.auditoraudit
+            info["filefmt"] = self.filefmt
+            info["extattr"] = self.extattr
+
         if info["type"] == DIRTYPE and not info["name"].endswith("/"):
             info["name"] += "/"
 
@@ -997,6 +1100,13 @@ class TarInfo(object):
 
         if len(info["name"].encode(encoding, errors)) > LENGTH_NAME:
             info["prefix"], info["name"] = self._posix_split_name(info["name"], encoding, errors)
+        if sys.platform == 'zos' or sys.platform == 'zvm' :
+            #z/OS allows large uid/gid numbers to be truncated in order
+            #to fit into the header.
+            for name, digits in (("uid", 8), ("gid", 8)):
+                val = info.get(name, 0)
+                if not val < 8 ** (digits - 1):
+                    info[name] = val % (8 ** (digits - 1) - 1)
 
         return self._create_header(info, USTAR_FORMAT, encoding, errors)
 
@@ -1063,6 +1173,25 @@ class TarInfo(object):
             # The existing pax header has priority.
             if needs_pax and name not in pax_headers:
                 pax_headers[name] = str(val)
+
+        #Add ZOS extended attributes to PAX header.
+        if sys.platform == 'zos':
+            #Redo mtime with no decimal place. This is for compatibility
+            #with the z/OS pax specification.
+            if "mtime" in pax_headers.keys():
+                pax_headers["mtime"] = str(int(float(pax_headers["mtime"])))
+            if info["acls"]:
+                pax_headers["ZOS.acls"] = info["acls"]
+            if info["taginfo"]:
+                pax_headers["ZOS.taginfo"] = info["taginfo"]
+            if info["useraudit"]:
+                pax_headers["ZOS.useraudit"] = info["useraudit"]
+            if info["auditoraudit"]:
+                pax_headers["ZOS.auditoraudit"] = info["auditoraudit"]
+            if info["filefmt"]:
+                pax_headers["ZOS.filefmt"] = info["filefmt"]
+            if info["extattr"]:
+                pax_headers["ZOS.extattr"] = info["extattr"]
 
         # Create a pax extended header if necessary.
         if pax_headers:
@@ -1302,7 +1431,12 @@ class TarInfo(object):
         """Choose the right processing method depending on
            the type and call it.
         """
-        if self.type in (GNUTYPE_LONGNAME, GNUTYPE_LONGLINK):
+        #Use both file type and specific filepath to distinguish OS390 special
+        #header from GNU sparse type.
+        if self.type in (OS390HEADERTYPE) and self.name.find(OS390_PATH_PREFIX) == 0 \
+            and sys.platform == 'zos':
+            return self._proc_os390_header(tarfile)
+        elif self.type in (GNUTYPE_LONGNAME, GNUTYPE_LONGLINK):
             return self._proc_gnulong(tarfile)
         elif self.type == GNUTYPE_SPARSE:
             return self._proc_sparse(tarfile)
@@ -1525,6 +1659,37 @@ class TarInfo(object):
         next.offset_data = tarfile.fileobj.tell()
         next.sparse = list(zip(sparse[::2], sparse[1::2]))
 
+    def _proc_os390_header(self, tarfile):
+        buf = tarfile.fileobj.read(self._block(self.size))
+        #Process header file
+        #Header files always in IBM-1047 (EBCDIC) format.
+        sr = codecs.getreader("cp1047")
+        extinfo = {}
+        with io.BytesIO(buf) as hf:
+            #Transfer contents from file data.
+            hf.seek(0)
+            with sr(hf) as tf:
+                regex_keyval = re.compile(r"(\S+)\s*=(.*)")
+                pos = 0
+                #Parse contents of the file data. Patch the next file with
+                #extended attributes from this content.
+                for line in tf:
+                    match = regex_keyval.match(line, pos)
+                    if match is not None and match.group(1) == OS390_TAGINFO_KEYWORD:
+                        extinfo['taginfo'] = match.group(2).strip()
+        #We assume that the presence of an OS390 special file mean that this archive
+        #was made by a z/OS native archiver.
+        # Fetch the next header.
+        try:
+            next = self.fromtarfile(tarfile)
+        except HeaderError as e:
+            raise SubsequentHeaderError(str(e)) from None
+        finally:
+            #Apply attributes to header.
+            for key in extinfo.keys():
+                setattr(next, key, extinfo[key])
+        return next
+
     def _apply_pax_info(self, pax_headers, encoding, errors):
         """Replace fields with supplemental information from a previous
            pax extended or global header.
@@ -1545,6 +1710,9 @@ class TarInfo(object):
                 if keyword == "path":
                     value = value.rstrip("/")
                 setattr(self, keyword, value)
+            elif sys.platform == "zos" and keyword in ZOS_PAX_FIELDS:
+                #Assigning z/OS PAX headers to TarInfo members.
+                setattr(self, keyword[4:], value)
 
         self.pax_headers = pax_headers.copy()
 
@@ -2063,6 +2231,22 @@ class TarFile(object):
         else:
             return None
 
+        if sys.platform == 'zos':
+            #Getting encoding tag information from file.
+            try:
+                cssid, set_txtflag = os.get_tagging_f(name)
+				#Preserve all combinations, not only text tagged
+                #if cssid != 0 and set_txtflag == True:
+                if cssid != 0 or set_txtflag == True:
+                    txtflag = ""
+                    if set_txtflag == True:
+                        txtflag = '1'
+                    else:
+                        txtflag = '0'
+                    tarinfo.taginfo = txtflag + " " + str(cssid)
+            except:
+                pass
+
         # Fill the TarInfo object with all
         # information we can get.
         tarinfo.name = arcname
@@ -2073,6 +2257,17 @@ class TarFile(object):
             tarinfo.size = statres.st_size
         else:
             tarinfo.size = 0
+        if sys.platform == 'zos' sys.platform == 'zvm' :
+            # z/OS pax can't handle mtime with decimal components, and
+            # for now mtime isn't tracked with below-second granularity.
+            # We can fix this by rounding, but in case we get more
+            # resolution at some point, make that rounding conditional.
+            rounded_time = round(statres.st_mtime)
+            if rounded_time - statres.st_mtime < 0.000000001:
+                tarinfo.mtime = rounded_time
+            else:
+                tarinfo.mtime = statres.st_mtime
+        else:
         tarinfo.mtime = statres.st_mtime
         tarinfo.type = type
         tarinfo.linkname = linkname
@@ -2168,7 +2363,19 @@ class TarFile(object):
                 return
 
         # Append the tar header and data to the archive.
+
         if tarinfo.isreg():
+            if sys.platform == 'zos' or sys.platform == 'zvm' and self.format == USTAR_FORMAT:
+                #Extended USTAR settings in OS390/ZOS are recorded
+                #as special header files before the regular file.
+                hf = io.BytesIO()
+                #Header files are encoded in IBM-1047 (EBCDIC).
+                sw = codecs.getwriter("cp1047")
+                with sw(hf) as tf:
+                    self.create_os390_ustar_file(tarinfo, tf)
+                    headerinfo = self.get_os390_ustar_header_info(tf.getbuffer().nbytes, tarinfo)
+                    tf.seek(0) #Rewind to begining so it can be added to archive.
+                    self.addfile(headerinfo, tf)
             with bltn_open(name, "rb") as f:
                 self.addfile(tarinfo, f)
 
@@ -2198,7 +2405,7 @@ class TarFile(object):
         bufsize=self.copybufsize
         # If there's data to follow, append it.
         if fileobj is not None:
-            copyfileobj(fileobj, self.fileobj, tarinfo.size, bufsize=bufsize)
+            copyfileobj(fileobj, self.fileobj, tarinfo.size, bufsize=bufsize, tag=False)
             blocks, remainder = divmod(tarinfo.size, BLOCKSIZE)
             if remainder > 0:
                 self.fileobj.write(NUL * (BLOCKSIZE - remainder))
@@ -2206,6 +2413,43 @@ class TarFile(object):
             self.offset += blocks * BLOCKSIZE
 
         self.members.append(tarinfo)
+
+    def get_os390_ustar_header_info(self, size, tarinfo):
+        """Returns the OS390 special header file information such that
+           the header file can be added to the tar archive. tarinfo should
+           contain information of the target file, NOT the special header
+           file itself. size is the size in bytes of the header file.
+        """
+        timestamp = int(time.time())
+        headerinfo = TarInfo()
+        headerinfo.name = OS390_PATH_PREFIX + str(timestamp)
+        headerinfo.mode = tarinfo.mode
+        headerinfo.uid = tarinfo.uid
+        headerinfo.gid = tarinfo.gid
+        headerinfo.size = size
+        headerinfo.type = OS390HEADERTYPE
+        headerinfo.mtime = timestamp
+        headerinfo.uname = tarinfo.uname
+        headerinfo.gname = tarinfo.gname
+        headerinfo.devmajor = tarinfo.devmajor
+        headerinfo.devminor = tarinfo.devminor
+        headerinfo.taginfo = ""
+        return headerinfo
+
+
+    def create_os390_ustar_file(self, tarinfo, headerfileobj):
+        """Writes an OS390 special header to headerfileobj file handle
+           using extended attributes from tarinfo. tarinfo should reflect
+           the information from the target file, NOT the special header
+           file itself.
+        """
+        info = tarinfo.get_info()
+        #Write header.
+        headerfileobj.write(OS390_USTAR_HEADER)
+        #Write target file location.
+        headerfileobj.write(OS390_APPLYTO_KEYWORD + "=next\n")
+        if info["taginfo"]:
+            headerfileobj.write(OS390_TAGINFO_KEYWORD + "=" + info["taginfo"] + "\n")
 
     def _get_filter_function(self, filter):
         if filter is None:
@@ -2442,18 +2686,57 @@ class TarFile(object):
     def makefile(self, tarinfo, targetpath):
         """Make a file called targetpath.
         """
+
         source = self.fileobj
         source.seek(tarinfo.offset_data)
         bufsize = self.copybufsize
         with bltn_open(targetpath, "wb") as target:
+            guess_tag = True
+            ccsid = 0
+            if sys.platform == 'zos':
+                if tarinfo.taginfo:
+                    components = tarinfo.taginfo.split()
+                    # Some z/OS archives created by legacy python versions
+                    # store a single '0' in the taginfo to indicate an untagged
+                    # file, so taginfo may only have one component.
+                    ccsid_str = components[0 if len(components) == 1 else 1]
+                    ccsid = int(ccsid_str)
+                    if ccsid > 0:
+                        guess_tag = False
             if tarinfo.sparse is not None:
                 for offset, size in tarinfo.sparse:
                     target.seek(offset)
-                    copyfileobj(source, target, size, ReadError, bufsize)
+                    copyfileobj(source, target, size, ReadError, bufsize, tag=guess_tag)
                 target.seek(tarinfo.size)
                 target.truncate()
             else:
-                copyfileobj(source, target, tarinfo.size, ReadError, bufsize)
+                copyfileobj(source, target, tarinfo.size, ReadError, bufsize, tag=guess_tag)
+            if sys.platform == 'zos':
+                #Setting encoding tag if available.
+                try:
+                    if ccsid > 0:
+                        # If it's not flushed, the characters might get converted
+                        target.flush()
+						# For binary files call zos_util.tag_binary
+                        if ccsid == 65535:
+                            zos_util.tag_binary(targetpath)
+                        else:
+                            os.set_tagging(targetpath, ccsid=int(ccsid))
+                except:
+                    pass
+                #Setting APF authorization if available.
+                #Commented out since apf not implmented yet.
+#                try:
+#                    extattr = tarinfo.extattr
+#                    if extattr:
+#                        if extattr[0] == 'a':
+#                            zos_util.enable_apf(targetpath)
+#                        else:
+#                            zos_util.disable_apf(targetpath)
+#                except:
+#                    pass
+
+
 
     def makeunknown(self, tarinfo, targetpath):
         """Make a file from a TarInfo object with an unknown type

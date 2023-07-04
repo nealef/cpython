@@ -1,5 +1,11 @@
 #! /usr/bin/env python3
 
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """
 The Python Debugger Pdb
 =======================
@@ -1577,9 +1583,16 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         self._wait_for_mainpyfile = True
         self.mainpyfile = self.canonic(filename)
         self._user_requested_quit = False
+        code = None
+        if sys.platform == 'zos' or sys.platform == 'zvm':
+            with open(filename, 'r') as f:
+                code = bytes(f.read(), 'utf-8')
+        else:
         with io.open_code(filename) as fp:
+                code = fp.read()
+
             statement = "exec(compile(%r, %r, 'exec'))" % \
-                        (fp.read(), self.mainpyfile)
+                    (code, self.mainpyfile)
         self.run(statement)
 
 # Collect all command help into docstring, if not run with -OO

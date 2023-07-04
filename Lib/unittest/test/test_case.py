@@ -19,7 +19,7 @@ from unittest.test.support import (
     TestEquality, TestHashing, LoggingResult, LegacyLoggingResult,
     ResultWithNoStartTestRunStopTestRun
 )
-from test.support import captured_stderr, gc_collect
+from test.support import captured_stderr
 
 
 log_foo = logging.getLogger('foo')
@@ -1953,7 +1953,6 @@ test case
         for method_name in ('test1', 'test2'):
             testcase = TestCase(method_name)
             testcase.run()
-            gc_collect()  # For PyPy or other GCs.
             self.assertEqual(MyException.ninstance, 0)
 
 

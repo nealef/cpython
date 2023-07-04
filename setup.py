@@ -1699,6 +1699,7 @@ class PyBuildExt(build_ext):
             version_req = '"1.1.3"'
             if MACOS and is_macosx_sdk_path(zlib_h):
                 zlib_h = os.path.join(macosx_sdk_root(), zlib_h[1:])
+            print(f'zlib_h: {zlib_h}')
             with open(zlib_h) as fp:
                 while 1:
                     line = fp.readline()
@@ -2259,6 +2260,9 @@ class PyBuildExt(build_ext):
 
         elif HOST_PLATFORM.startswith('hp-ux'):
             extra_link_args.append('-fPIC')
+
+        elif sys.platform == 'zos' or sys.platform == 'zvm':
+            extra_compile_args.append('-q32')
 
         ext = Extension('_ctypes',
                         include_dirs=include_dirs,

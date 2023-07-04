@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """Supporting definitions for the Python regression tests."""
 
 if __name__ != 'test.support':
@@ -722,8 +728,9 @@ def check_sizeof(test, o, size):
 # Decorator for running a function in a different locale, correctly resetting
 # it afterwards.
 
-@contextlib.contextmanager
 def run_with_locale(catstr, *locales):
+    def decorator(func):
+        def inner(*args, **kwds):
             try:
                 import locale
                 category = getattr(locale, catstr)
@@ -742,11 +749,24 @@ def run_with_locale(catstr, *locales):
                     except:
                         pass
 
+            # now run the function, resetting the locale on exceptions
             try:
-                yield
+                return func(*args, **kwds)
             finally:
                 if locale and orig_locale:
+                    # For zOS if the testcase used threading, setting the locale back may fail. This is fine
+                    # for when it's an entire test-suite running the locale
+                    if sys.platform == 'zos' or sys.platform == 'zvm':
+                        try:
                     locale.setlocale(category, orig_locale)
+                        except locale.Error:
+                            pass
+                    else:
+                        locale.setlocale(category, orig_locale)
+        inner.__name__ = func.__name__
+        inner.__doc__ = func.__doc__
+        return inner
+    return decorator
 
 #=======================================================================
 # Decorator for running a function in a specific timezone, correctly

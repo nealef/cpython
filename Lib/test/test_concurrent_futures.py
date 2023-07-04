@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 from test import support
 from test.support import import_helper
 from test.support import threading_helper
@@ -249,6 +255,9 @@ class FailingInitializerMixin(ExecutorMixin):
         super().setUp()
 
     def test_initializer(self):
+        if self.mp_context == mp.get_context("fork") and (sys.platform == "zos" or sys.platform == 'zvm'):
+            self.skipTest("Multithreaded child calling fork is invalid on z/OS")
+
         with self._assert_logged('ValueError: error in initializer'):
             try:
                 future = self.executor.submit(get_init_status)
@@ -1052,6 +1061,9 @@ class ProcessPoolExecutorTest(ExecutorTest):
 
     @hashlib_helper.requires_hashdigest('md5')
     def test_ressources_gced_in_workers(self):
+        if self.ctx == 'fork' and (sys.platform == "zos" or sys.platform == 'zvm'):
+            self.skipTest("Multithreaded child calling fork is invalid on z/OS")
+
         # Ensure that argument for a job are correctly gc-ed after the job
         # is finished
         mgr = self.get_context().Manager()

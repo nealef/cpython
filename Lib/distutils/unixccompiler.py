@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """distutils.unixccompiler
 
 Contains the UnixCCompiler class, a subclass of CCompiler that handles
@@ -13,7 +19,7 @@ the "typical" Unix-style command-line C compiler:
   * link shared library handled by 'cc -shared'
 """
 
-import os, sys, re
+import os, sys, re, stat
 
 from distutils import sysconfig
 from distutils.dep_util import newer
@@ -71,7 +77,8 @@ class UnixCCompiler(CCompiler):
     # reasonable common default here, but it's not necessarily used on all
     # Unices!
 
-    src_extensions = [".c",".C",".cc",".cxx",".cpp",".m"]
+    src_extensions = [".c",".C",".cc",".cxx",".cpp",".m", "s"]
+    _cpp_extensions = [".C", ".cc", ".cxx", ".cpp"]
     obj_extension = ".o"
     static_lib_extension = ".a"
     shared_lib_extension = ".so"
@@ -113,6 +120,18 @@ class UnixCCompiler(CCompiler):
         if sys.platform == 'darwin':
             compiler_so = _osx_support.compiler_fixup(compiler_so,
                                                     cc_args + extra_postargs)
+        elif sys.platform == "zos" or sys.platform == 'zvm':
+            if(ext in self._cpp_extensions):
+                #for c langlvl is required to deal with gnu99-ish stuff in python.h
+                #for c++ this will cause a compiler error so just remove it
+                compiler_so = [arg for arg in compiler_so if "langlvl=extc99" not in arg]
+
+                i = 0
+                if os.path.basename(compiler_so[0]) == "env":
+                    i = 1
+                    while '=' in linker[i]:
+                        i += 1
+                compiler_so[i] = self.compiler_cxx[i]
         try:
             self.spawn(compiler_so + cc_args + [src, '-o', obj] +
                        extra_postargs)
@@ -154,6 +173,23 @@ class UnixCCompiler(CCompiler):
         fixed_args = self._fix_lib_args(libraries, library_dirs,
                                         runtime_library_dirs)
         libraries, library_dirs, runtime_library_dirs = fixed_args
+        # if on z/OS we need to get the side decks
+        # so we search all the dynamic library dirs for
+        # the -l's that have them and then remove the -l
+        if sys.platform == "zos" or sys.platform == 'zvm':
+            side_decks = []
+            for dir in runtime_library_dirs:
+                # use a copy of libraries since we will modify it in-place
+                for lib in libraries[:]: 
+                    libpath = os.path.join(dir, f'lib{lib}.x')
+                    path = os.path.join(dir, f'{lib}.x')
+                    if  os.path.exists(path):
+                        side_decks.extend([path])
+                        libraries.remove(lib)
+
+                    elif os.path.exists(libpath): 
+                        side_decks.extend([libpath])
+                        libraries.remove(lib)
 
         lib_opts = gen_lib_options(self, library_dirs, runtime_library_dirs,
                                    libraries)
@@ -200,8 +236,46 @@ class UnixCCompiler(CCompiler):
 
                 if sys.platform == 'darwin':
                     linker = _osx_support.compiler_fixup(linker, ld_args)
+                elif sys.platform == "zos"  or sys.platform == "zvm":
+                    LIBPL = sysconfig.get_config_var("LIBPL")
+                    LDVERSION = sysconfig.get_config_var("LDVERSION")
+                    pythonx = f'libpython{LDVERSION}.x'
+
+                    new_pythonx = os.path.join(LIBPL, pythonx)
+                    # if libpython{version}.x file is not under installation dir, check source dir
+                    if not os.path.isfile(new_pythonx):
+                        srcdir = sysconfig.get_config_var("srcdir")
+                        new_pythonx = os.path.join(srcdir, pythonx)
+                    # remove the existing python.x in ld_args
+                    ld_args = [item for item in ld_args if item != pythonx]
+                    ld_args.extend(["-Wl,dll", new_pythonx])
+
+                    # Set for cross builds explicitly
+                    xx = os.environ
+                    print(f'env: {xx}')
+                    if "_PYTHON_HOST_PLATFORM" in os.environ:
+                        host = os.environ["_PYTHON_HOST_PLATFORM"]
+                    else:
+                        host = sys.platform
+                    print(f'host: {host}')
+                    if host == "zvm" : 
+                        ld_args.extend(["-q32"])
+                        ld_args.extend(["-Wl,let=8"])
+                    else :
+                        ld_args.extend(["-q64"])
+
+                    # add the sidedecks from above 
+                    ld_args.extend(side_decks)
 
                 self.spawn(linker + ld_args)
+
+                if sys.platform == 'zos' or sys.platform == 'zvm':
+                    # output_filename
+                    pre, ext = os.path.splitext(output_filename)
+                    new_x = pre + '.x'
+                    if os.path.exists(new_x):
+                        stats = os.stat(new_x)
+                        os.chmod(new_x, stats.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
             except DistutilsExecError as msg:
                 raise LinkError(msg)
         else:
@@ -233,7 +307,7 @@ class UnixCCompiler(CCompiler):
         # the configuration data stored in the Python installation, so
         # we use this hack.
         compiler = os.path.basename(sysconfig.get_config_var("CC"))
-        if sys.platform[:6] == "darwin":
+        if sys.platform[:6] == "darwin" or sys.platform == "zos" or sys.platform == 'zvm':
             # MacOSX's linker doesn't understand the -R flag at all
             return "-L" + dir
         elif sys.platform[:7] == "freebsd":

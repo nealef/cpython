@@ -19,7 +19,7 @@ typedef struct StrongCacheNode StrongCacheNode;
 typedef struct {
     PyObject *utcoff;
     PyObject *dstoff;
-    PyObject *tzname;
+    PyObject *tzName;
     long utcoff_seconds;
 } _ttinfo;
 
@@ -135,7 +135,7 @@ find_tzrule_ttinfo_fromutc(_tzrule *rule, int64_t ts, int year,
                            unsigned char *fold);
 
 static int
-build_ttinfo(long utcoffset, long dstoffset, PyObject *tzname, _ttinfo *out);
+build_ttinfo(long utcoffset, long dstoffset, PyObject *tzName, _ttinfo *out);
 static void
 xdecref_ttinfo(_ttinfo *ttinfo);
 static int
@@ -478,14 +478,14 @@ zoneinfo_dst(PyObject *self, PyObject *dt)
 }
 
 static PyObject *
-zoneinfo_tzname(PyObject *self, PyObject *dt)
+zoneinfo_tzName(PyObject *self, PyObject *dt)
 {
     _ttinfo *tti = find_ttinfo((PyZoneInfo_ZoneInfo *)self, dt);
     if (tti == NULL) {
         return NULL;
     }
-    Py_INCREF(tti->tzname);
-    return tti->tzname;
+    Py_INCREF(tti->tzName);
+    return tti->tzName;
 }
 
 #define GET_DT_TZINFO PyDateTime_DATE_GET_TZINFO
@@ -760,11 +760,11 @@ error:
  * initialized _ttinfo objects.
  */
 static int
-build_ttinfo(long utcoffset, long dstoffset, PyObject *tzname, _ttinfo *out)
+build_ttinfo(long utcoffset, long dstoffset, PyObject *tzName, _ttinfo *out)
 {
     out->utcoff = NULL;
     out->dstoff = NULL;
-    out->tzname = NULL;
+    out->tzName = NULL;
 
     out->utcoff_seconds = utcoffset;
     out->utcoff = load_timedelta(utcoffset);
@@ -777,8 +777,8 @@ build_ttinfo(long utcoffset, long dstoffset, PyObject *tzname, _ttinfo *out)
         return -1;
     }
 
-    out->tzname = tzname;
-    Py_INCREF(tzname);
+    out->tzName = tzName;
+    Py_INCREF(tzName);
 
     return 0;
 }
@@ -790,7 +790,7 @@ xdecref_ttinfo(_ttinfo *ttinfo)
     if (ttinfo != NULL) {
         Py_XDECREF(ttinfo->utcoff);
         Py_XDECREF(ttinfo->dstoff);
-        Py_XDECREF(ttinfo->tzname);
+        Py_XDECREF(ttinfo->tzName);
     }
 }
 
@@ -809,7 +809,7 @@ ttinfo_eq(const _ttinfo *const tti0, const _ttinfo *const tti1)
         goto end;
     }
 
-    if ((rv = PyObject_RichCompareBool(tti0->tzname, tti1->tzname, Py_EQ)) <
+    if ((rv = PyObject_RichCompareBool(tti0->tzName, tti1->tzName, Py_EQ)) <
         1) {
         goto end;
     }
@@ -999,13 +999,13 @@ load_data(PyZoneInfo_ZoneInfo *self, PyObject *file_obj)
         goto error;
     }
     for (size_t i = 0; i < self->num_ttinfos; ++i) {
-        PyObject *tzname = PyTuple_GetItem(abbr, i);
-        if (tzname == NULL) {
+        PyObject *tzName = PyTuple_GetItem(abbr, i);
+        if (tzName == NULL) {
             goto error;
         }
 
         ttinfos_allocated++;
-        if (build_ttinfo(utcoff[i], dstoff[i], tzname, &(self->_ttinfos[i]))) {
+        if (build_ttinfo(utcoff[i], dstoff[i], tzName, &(self->_ttinfos[i]))) {
             goto error;
         }
     }
@@ -1056,7 +1056,7 @@ load_data(PyZoneInfo_ZoneInfo *self, PyObject *file_obj)
         }
 
         _ttinfo *tti = &(self->_ttinfos[idx]);
-        build_tzrule(tti->tzname, NULL, tti->utcoff_seconds, 0, NULL, NULL,
+        build_tzrule(tti->tzName, NULL, tti->utcoff_seconds, 0, NULL, NULL,
                      &(self->tzrule_after));
 
         // We've abused the build_tzrule constructor to construct an STD-only
@@ -2563,7 +2563,7 @@ static PyMethodDef zoneinfo_methods[] = {
     {"dst", (PyCFunction)zoneinfo_dst, METH_O,
      PyDoc_STR("Retrieve a timedelta representing the amount of DST applied "
                "in a zone at the given datetime.")},
-    {"tzname", (PyCFunction)zoneinfo_tzname, METH_O,
+    {"tzname", (PyCFunction)zoneinfo_tzName, METH_O,
      PyDoc_STR("Retrieve a string containing the abbreviation for the time "
                "zone that applies in a zone at a given datetime.")},
     {"fromutc", (PyCFunction)zoneinfo_fromutc, METH_O,
@@ -2684,7 +2684,7 @@ zoneinfomodule_exec(PyObject *m)
     if (NO_TTINFO.utcoff == NULL) {
         NO_TTINFO.utcoff = Py_None;
         NO_TTINFO.dstoff = Py_None;
-        NO_TTINFO.tzname = Py_None;
+        NO_TTINFO.tzName = Py_None;
 
         for (size_t i = 0; i < 3; ++i) {
             Py_INCREF(Py_None);

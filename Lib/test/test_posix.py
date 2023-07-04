@@ -2170,9 +2170,17 @@ class TestPosixWeaklinking(unittest.TestCase):
                 os.utime("path", dir_fd=0)
 
 
-def tearDownModule():
+def test_main():
+    try:
+        support.run_unittest(
+            PosixTester,
+            PosixGroupsTester,
+            TestPosixSpawn,
+            TestPosixSpawnP,
+            TestPosixWeaklinking
+        )
+    finally:
     support.reap_children()
 
-
 if __name__ == '__main__':
-    unittest.main()
+    test_main()

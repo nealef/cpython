@@ -3090,6 +3090,7 @@ _Py_DumpPathConfig(PyThreadState *tstate)
         } while (0)
 
     PyObject *obj;
+    DUMP_SYS(platform);
     DUMP_SYS(_base_executable);
     DUMP_SYS(base_prefix);
     DUMP_SYS(base_exec_prefix);

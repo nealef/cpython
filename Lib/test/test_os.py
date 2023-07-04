@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 # As a test suite for the os module, this is woefully inadequate, but this
 # does add tests for a few functions which have been determined to be more
 # portable than they had been thought to be.
@@ -996,6 +1002,9 @@ class EnvironTests(mapping_tests.BasicTestMappingProtocol):
     def test_update2(self):
         os.environ.clear()
         os.environ.update(HELLO="World")
+        #zos require env variables to enable ASCII mode
+        if sys.platform == 'zos' or sys.platform == 'zvm':
+            os.environ.update(_BPXK_AUTOCVT='ON')
         with os.popen("%s -c 'echo $HELLO'" % unix_shell) as popen:
             value = popen.read().strip()
             self.assertEqual(value, "World")
@@ -1840,8 +1849,8 @@ OS_URANDOM_DONT_USE_FD = (
 
 @unittest.skipIf(OS_URANDOM_DONT_USE_FD ,
                  "os.random() does not use a file descriptor")
-@unittest.skipIf(sys.platform == "vxworks",
-                 "VxWorks can't set RLIMIT_NOFILE to 1")
+@unittest.skipIf(sys.platform == "vxworks" or sys.platform == "zos" or sys.platform == "zvm",
+                 "VxWorks/zOS can't set RLIMIT_NOFILE to 1")
 class URandomFDTests(unittest.TestCase):
     @unittest.skipUnless(resource, "test requires the resource module")
     def test_urandom_failure(self):
@@ -4040,7 +4049,7 @@ class PathTConverterTests(unittest.TestCase):
         ('access', False, (os.F_OK,), None),
         ('chflags', False, (0,), None),
         ('lchflags', False, (0,), None),
-        ('open', False, (0,), getattr(os, 'close', None)),
+        ('open', False, (os.O_RDONLY,), getattr(os, 'close', None)),
     ]
 
     def test_path_t_converter(self):

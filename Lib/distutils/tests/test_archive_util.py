@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 # -*- coding: utf-8 -*-
 """Tests for distutils.archive_util."""
 import unittest
@@ -338,7 +344,7 @@ class ArchiveUtilTestCase(support.TempdirManager,
     def test_make_archive_owner_group(self):
         # testing make_archive with owner and group, with various combinations
         # this works even if there's not gid/uid support
-        if UID_GID_SUPPORT:
+        if UID_GID_SUPPORT and sys.platform != 'zos' and sys.platform != 'zvm':
             group = grp.getgrgid(0)[0]
             owner = pwd.getpwuid(0)[0]
         else:
@@ -362,6 +368,7 @@ class ArchiveUtilTestCase(support.TempdirManager,
                            owner='kjhkjhkjg', group='oihohoh')
         self.assertTrue(os.path.exists(res))
 
+    @unittest.skipUnless(sys.platform != 'zos', 'The root gid is not fixed')
     @unittest.skipUnless(ZLIB_SUPPORT, "Requires zlib")
     @unittest.skipUnless(UID_GID_SUPPORT, "Requires grp and pwd support")
     def test_tarfile_root_owner(self):

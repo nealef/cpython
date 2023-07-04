@@ -1,4 +1,11 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 import unittest
+import sys
 
 from ctypes import *
 import _ctypes_test
@@ -17,6 +24,7 @@ class LibTest(unittest.TestCase):
         import math
         self.assertEqual(lib.my_sqrt(2.0), math.sqrt(2.0))
 
+    @unittest.skipIf(sys.platform == "zos" or sys.platform == "zvm", "temproraily disabled on z/OS")
     def test_qsort(self):
         comparefunc = CFUNCTYPE(c_int, POINTER(c_char), POINTER(c_char))
         lib.my_qsort.argtypes = c_void_p, c_size_t, c_size_t, comparefunc

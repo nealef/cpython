@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 import unittest
 import sys
 from test import support
@@ -262,11 +268,13 @@ class ComplexTest(unittest.TestCase):
                     c = complex(real, imag)
                     try:
                         c ** real
-                    except OverflowError:
+                    #On z/OS, passing such large numbers to cosine triggers EDOM.
+                    except (OverflowError, ZeroDivisionError):
                         pass
                     try:
                         c ** c
-                    except OverflowError:
+                    #On z/OS, passing such large numbers to cosine triggers EDOM.
+                    except (OverflowError, ZeroDivisionError):
                         pass
 
     def test_pow_with_small_integer_exponents(self):
@@ -772,6 +780,8 @@ class ComplexTest(unittest.TestCase):
         self.assertEqual(format(complex(INF, 1), 'F'), 'INF+1.000000j')
         self.assertEqual(format(complex(INF, -1), 'F'), 'INF-1.000000j')
 
+def test_main():
+    support.run_unittest(ComplexTest)
 
 if __name__ == "__main__":
-    unittest.main()
+    test_main()

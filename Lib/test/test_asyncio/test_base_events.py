@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """Tests for base_events.py"""
 
 import concurrent.futures
@@ -1339,10 +1345,14 @@ class BaseEventLoopWithSelectorTests(test_utils.TestCase):
         self.loop._add_writer = mock.Mock()
         self.loop._add_writer._is_coroutine = False
 
-        coro = self.loop.create_connection(asyncio.Protocol, 'fe80::1%1', 80)
+        if sys.platform == 'zos' or sys.platform == 'zvm':
+            loopback = socket.if_nametoindex('LOOPBACK')
+        else:
+            loopback = 1
+        coro = self.loop.create_connection(asyncio.Protocol, 'fe80::1%{}'.format(loopback), 80)
         t, p = self.loop.run_until_complete(coro)
         try:
-            sock.connect.assert_called_with(('fe80::1', 80, 0, 1))
+            sock.connect.assert_called_with(('fe80::1', 80, 0, loopback))
             _, kwargs = m_socket.socket.call_args
             self.assertEqual(kwargs['family'], m_socket.AF_INET6)
             self.assertEqual(kwargs['type'], m_socket.SOCK_STREAM)
@@ -1360,6 +1370,11 @@ class BaseEventLoopWithSelectorTests(test_utils.TestCase):
 
     @patch_socket
     def test_create_connection_service_name(self, m_socket):
+        try:
+            if socket.getservbyname('http', 'tcp'):
+                pass
+        except OSError:
+            raise unittest.SkipTest('http service must be defined')
         m_socket.getaddrinfo = socket.getaddrinfo
         sock = m_socket.socket.return_value
 

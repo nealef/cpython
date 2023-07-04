@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 from test import support
 from test.support import socket_helper
 
@@ -9,6 +15,7 @@ import time
 import calendar
 import threading
 import socket
+import sys
 
 from test.support import (verbose,
                           run_with_tz, run_with_locale, cpython_only)
@@ -56,6 +63,7 @@ class TestImaplib(unittest.TestCase):
                                        timezone(timedelta(0, 2 * 60 * 60))),
                 '"18-May-2033 05:33:20 +0200"']
 
+    @unittest.skipIf(sys.platform == 'zos' or sys.platform == 'zvm', 'Cannot change tz in multithreaded environment')
     @run_with_locale('LC_ALL', 'de_DE', 'fr_FR')
     # DST rules included to work around quirk where the Gnu C library may not
     # otherwise restore the previous time zone

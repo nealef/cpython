@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 ###############################################################################
 # Server process to keep track of unlinked resources (like shared memory
 # segments, semaphores etc.) and clean them.
@@ -35,6 +41,13 @@ _CLEANUP_FUNCS = {
 
 if os.name == 'posix':
     import _multiprocessing
+
+    if hasattr(_multiprocessing, 'flags') and 'USING_SYSV_SEMAPHORES' in _multiprocessing.flags:
+        _CLEANUP_FUNCS.update({
+            'semaphore': _multiprocessing.sem_destroy,
+            'shared_memory': os.unlink,
+        })
+    else:
     import _posixshmem
 
     # Use sem_unlink() to clean up named semaphores.

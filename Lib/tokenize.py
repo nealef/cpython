@@ -32,6 +32,7 @@ from io import TextIOWrapper
 import itertools as _itertools
 import re
 import sys
+import os
 from token import *
 from token import EXACT_TOKEN_TYPES
 
@@ -395,6 +396,22 @@ def open(filename):
     try:
         encoding, lines = detect_encoding(buffer.readline)
         buffer.seek(0)
+        text = TextIOWrapper(buffer, encoding, line_buffering=True)
+        text.mode = 'r'
+        return text
+    except (UnicodeDecodeError, SyntaxError) as e:
+        # We only ignore it if the encoding found is actually incorrect,
+        # otherwise, it might just be in EBCDIC
+        if sys.platform != 'zos' and sys.platform != 'zvm' or 'unknown encoding' in str(e):
+            buffer.close()
+            raise
+
+        buffer.seek(0)
+        mapping = {1047: 'cp1047', 819: 'utf-8'}
+        with _builtin_open(filename, 'rb') as f:
+            code = f.read(32)
+            ccsid = os.get_tagging(code)
+        encoding = mapping.get(ccsid, 'utf-8')
         text = TextIOWrapper(buffer, encoding, line_buffering=True)
         text.mode = 'r'
         return text

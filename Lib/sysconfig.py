@@ -423,7 +423,8 @@ def _generate_posix_vars():
     # load the installed pyconfig.h:
     config_h = get_config_h_filename()
     try:
-        with open(config_h, encoding="utf-8") as f:
+        # with open(config_h, encoding="utf-8") as f:
+        with open(config_h, encoding="iso8859-1") as f:
             parse_config_h(f, vars)
     except OSError as e:
         msg = f"invalid Python installation: unable to open {config_h}"
@@ -460,14 +461,16 @@ def _generate_posix_vars():
     os.makedirs(pybuilddir, exist_ok=True)
     destfile = os.path.join(pybuilddir, name + '.py')
 
-    with open(destfile, 'w', encoding='utf8') as f:
+    # with open(destfile, 'w', encoding='utf8') as f:
+    with open(destfile, 'w') as f:
         f.write('# system configuration generated and used by'
                 ' the sysconfig module\n')
         f.write('build_time_vars = ')
         pprint.pprint(vars, stream=f)
 
     # Create file used for sys.path fixup -- see Modules/getpath.c
-    with open('pybuilddir.txt', 'w', encoding='utf8') as f:
+    # with open('pybuilddir.txt', 'w', encoding='utf8') as f:
+    with open('pybuilddir.txt', 'w') as f:
         f.write(pybuilddir)
 
 def _init_posix(vars):

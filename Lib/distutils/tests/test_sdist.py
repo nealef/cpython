@@ -1,5 +1,12 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """Tests for distutils.command.sdist."""
 import os
+import sys
 import tarfile
 import unittest
 import warnings
@@ -450,8 +457,13 @@ class SDistTestCase(BasePyPIRCCommandTestCase):
 
         # creating a gztar and specifying the owner+group
         cmd.formats = ['gztar']
-        cmd.owner = pwd.getpwuid(0)[0]
+        # On z/OS, uid/gid 0 and user root is not guaranteed to exist
+        if sys.platform == 'zos' or sys.platform == 'zvm':
+            cmd.group = grp.getgrgid(os.getgid()).gr_name
+            cmd.owner = pwd.getpwuid(os.getuid()).pw_name
+        else:
         cmd.group = grp.getgrgid(0)[0]
+            cmd.owner = pwd.getpwuid(0)[0]
         cmd.ensure_finalized()
         cmd.run()
 
@@ -460,6 +472,10 @@ class SDistTestCase(BasePyPIRCCommandTestCase):
         archive = tarfile.open(archive_name)
         try:
             for member in archive.getmembers():
+                if sys.platform == 'zos' or sys.platform == 'zvm':
+                    self.assertEqual(member.uid, os.getuid())
+                    self.assertEqual(member.gid, os.getgid())
+                else:
                 self.assertEqual(member.uid, 0)
                 self.assertEqual(member.gid, 0)
         finally:

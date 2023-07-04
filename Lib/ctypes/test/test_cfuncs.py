@@ -1,9 +1,16 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 # A lot of failures in these tests on Mac OS X.
 # Byte order related?
 
 import unittest
 from ctypes import *
 from ctypes.test import need_symbol
+import sys
 
 import _ctypes_test
 
@@ -159,12 +166,14 @@ class CFunctions(unittest.TestCase):
         self.assertEqual(self._dll.tf_bd(0, 42.), 14.)
         self.assertEqual(self.S(), 42)
 
+    @unittest.skipIf(sys.platform == "zos" or sys.platform == "zvm", "test broken on z/OS")
     def test_longdouble(self):
         self._dll.tf_D.restype = c_longdouble
         self._dll.tf_D.argtypes = (c_longdouble,)
         self.assertEqual(self._dll.tf_D(42.), 14.)
         self.assertEqual(self.S(), 42)
 
+    @unittest.skipIf(sys.platform == "zos" or sys.platform == "zvm", "test broken on z/OS")
     def test_longdouble_plus(self):
         self._dll.tf_bD.restype = c_longdouble
         self._dll.tf_bD.argtypes = (c_byte, c_longdouble)

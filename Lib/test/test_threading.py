@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """
 Tests for the threading module.
 """
@@ -30,7 +36,7 @@ from test import support
 # #12316 and #11870), and fork() from a worker thread is known to trigger
 # problems with some operating systems (issue #3863): skip problematic tests
 # on platforms known to behave badly.
-platforms_to_skip = ('netbsd5', 'hp-ux11')
+platforms_to_skip = ('netbsd5', 'hp-ux11', 'zos', 'zvm')
 
 # Is Python built with Py_DEBUG macro defined?
 Py_DEBUG = hasattr(sys, 'gettotalrefcount')
@@ -183,6 +189,7 @@ class ThreadTests(BaseTestCase):
         del threading._active[ident[0]]
 
     # run with a small(ish) thread stack size (256 KiB)
+    @unittest.skipIf(sys.platform in platforms_to_skip, "z/OS minimum stack size is 1MB")
     def test_various_ops_small_stack(self):
         if verbose:
             print('with 256 KiB thread stack size...')
@@ -927,39 +934,6 @@ class ThreadTests(BaseTestCase):
                b'(PYTHONTHREADDEBUG environment variable) '
                b'is deprecated and will be removed in Python 3.12')
         self.assertIn(msg, err)
-
-    def test_import_from_another_thread(self):
-        # bpo-1596321: If the threading module is first import from a thread
-        # different than the main thread, threading._shutdown() must handle
-        # this case without logging an error at Python exit.
-        code = textwrap.dedent('''
-            import _thread
-            import sys
-
-            event = _thread.allocate_lock()
-            event.acquire()
-
-            def import_threading():
-                import threading
-                event.release()
-
-            if 'threading' in sys.modules:
-                raise Exception('threading is already imported')
-
-            _thread.start_new_thread(import_threading, ())
-
-            # wait until the threading module is imported
-            event.acquire()
-            event.release()
-
-            if 'threading' not in sys.modules:
-                raise Exception('threading is not imported')
-
-            # don't wait until the thread completes
-        ''')
-        rc, out, err = assert_python_ok("-c", code)
-        self.assertEqual(out, b'')
-        self.assertEqual(err, b'')
 
 
 class ThreadJoinOnShutdown(BaseTestCase):

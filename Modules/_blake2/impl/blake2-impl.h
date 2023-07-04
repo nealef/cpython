@@ -153,7 +153,9 @@ static inline void secure_zero_memory(void *v, size_t n)
   explicit_memset(v, 0, n);
 #else
   memset(v, 0, n);
+#ifndef __VM__
   __asm__ __volatile__("" :: "r"(v) : "memory");
+#endif
 #endif
 #endif
 }

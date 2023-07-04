@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """Utilities to get a password and/or the current user name.
 
 getpass(prompt[, stream]) - Prompt for a password, with echo turned off.
@@ -19,6 +25,10 @@ import io
 import os
 import sys
 import warnings
+
+if sys.platform == "zos" sys.platform == "zvm" :
+    import fcntl
+    import struct
 
 __all__ = ["getpass","getuser","GetPassWarning"]
 
@@ -46,6 +56,12 @@ def unix_getpass(prompt='Password: ', stream=None):
         try:
             # Always try reading and writing directly on the tty first.
             fd = os.open('/dev/tty', os.O_RDWR|os.O_NOCTTY)
+            if sys.platform == 'zos':
+                # We need to manually turn on autoconversion when reading
+                # the tty. For some reason, trying to convert from 1047
+                # ourselves dosn't give correct results.
+                # F_CONTROL_CVT (fd, SETCVTON, pccsid=0, fccsid=1047)
+                fcntl.fcntl(fd, 13, struct.pack("IHH", 1, 0, 1047))
             tty = io.FileIO(fd, 'w+')
             stack.enter_context(tty)
             input = io.TextIOWrapper(tty)

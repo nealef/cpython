@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 # Copyright (c) 2004 Python Software Foundation.
 # All rights reserved.
 
@@ -51,7 +57,7 @@ if sys.platform == 'darwin':
 
 C = import_fresh_module('decimal', fresh=['_decimal'])
 P = import_fresh_module('decimal', blocked=['_decimal'])
-import decimal as orig_sys_decimal
+orig_sys_decimal = sys.modules['decimal']
 
 # fractions module must import the correct decimal module.
 cfractions = import_fresh_module('fractions', fresh=['fractions'])
@@ -5516,7 +5522,7 @@ class CWhitebox(unittest.TestCase):
                              Decimal.from_float(101.1))
 
     # Issue 41540:
-    @unittest.skipIf(sys.platform.startswith("aix"),
+    @unittest.skipIf(sys.platform.startswith("aix") or sys.platform == 'zos' or sys.platform == 'zvm',
                      "AIX: default ulimit: test is flaky because of extreme over-allocation")
     @unittest.skipIf(check_sanitizer(address=True, memory=True),
                      "ASAN/MSAN sanitizer defaults to crashing "

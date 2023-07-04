@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 import unittest
 import select
 import os
@@ -312,7 +318,13 @@ class DispatcherTests(unittest.TestCase):
         if hasattr(os, 'strerror'):
             self.assertEqual(err, os.strerror(errno.EPERM))
         err = asyncore._strerror(-1)
+        # On invalid errors on z, strerror() does not return any errors or set errno.
+        # It simply returns an empty string
+        if sys.platform == 'zos' or sys.platform == 'zvm':
+            self.assertTrue(err == "")
+        else:
         self.assertTrue(err != "")
+
 
 
 class dispatcherwithsend_noread(asyncore.dispatcher_with_send):

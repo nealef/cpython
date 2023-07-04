@@ -609,7 +609,7 @@ all_ins(PyObject* m)
     if (PyModule_AddIntMacro(m, DN_MULTISHOT)) return -1;
 #endif
 
-#ifdef HAVE_STROPTS_H
+#if defined(HAVE_STROPTS_H) && defined(I_PUSH)
     /* Unix 98 guarantees that these are in stropts.h. */
     if (PyModule_AddIntMacro(m, I_PUSH)) return -1;
     if (PyModule_AddIntMacro(m, I_POP)) return -1;

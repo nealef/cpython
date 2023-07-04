@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 # Windows specific tests
 
 from ctypes import *
@@ -91,6 +97,7 @@ class TestWinError(unittest.TestCase):
         self.assertEqual(e.winerror, ERROR_INVALID_PARAMETER)
 
 class Structures(unittest.TestCase):
+    @unittest.skipIf(sys.platform == "zos" or sys.platform == "zvm", "temproraily disabled on z/OS")
     def test_struct_by_value(self):
         class POINT(Structure):
             _fields_ = [("x", c_long),

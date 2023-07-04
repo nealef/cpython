@@ -1513,6 +1513,10 @@ _Py_Sigset_Converter(PyObject *obj, void *addr)
         return 0;
     }
 
+#ifdef __MVS__
+# define NSIG 37
+#endif
+
     while ((item = PyIter_Next(iterator)) != NULL) {
         signum = PyLong_AsLongAndOverflow(item, &overflow);
         Py_DECREF(item);

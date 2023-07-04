@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 import unittest
 from unittest import mock
 from test import support
@@ -1440,6 +1446,7 @@ class ProcessTestCase(BaseTestCase):
         self.assertFalse(os.path.exists(ofname))
         self.assertFalse(os.path.exists(efname))
 
+    @unittest.skipIf(sys.platform == 'zos' or sys.platform == 'zvm', "Bug in z/OS - select hangs on a full pipe even when closed")
     def test_communicate_epipe(self):
         # Issue 10963: communicate() should hide EPIPE
         p = subprocess.Popen(ZERO_RETURN_CMD,
@@ -1907,7 +1914,20 @@ class POSIXProcessTestCase(BaseTestCase):
         # still indicates that it was called.
 
         uid = os.geteuid()
-        test_users = [65534 if uid != 65534 else 65533, uid]
+        test_users = [uid]
+        if uid != 65534:
+            try:
+                pwd.getpwuid(65534)
+                test_users.append(65534)
+            except KeyError:
+                pass
+        else:
+            try:
+                pwd.getpwuid(65533)
+                test_users.append(65533)
+            except KeyError:
+                pass
+
         name_uid = "nobody" if sys.platform != 'darwin' else "unknown"
 
         if pwd is not None:
@@ -2796,6 +2816,7 @@ class POSIXProcessTestCase(BaseTestCase):
     @unittest.skipIf(sys.platform.startswith("freebsd") and
                      os.stat("/dev").st_dev == os.stat("/dev/fd").st_dev,
                      "Requires fdescfs mounted on /dev/fd on FreeBSD.")
+    @unittest.skipIf(sys.platform == 'zos' or sys.platform == 'zvm', 'Lowering rlimit to below current usage is invalid on z')
     def test_close_fds_when_max_fd_is_lowered(self):
         """Confirm that issue21618 is fixed (may fail under valgrind)."""
         fd_status = support.findfile("fd_status.py", subdir="subprocessdata")
@@ -3053,7 +3074,6 @@ class POSIXProcessTestCase(BaseTestCase):
         pid = p.pid
         with warnings_helper.check_warnings(('', ResourceWarning)):
             p = None
-            support.gc_collect()  # For PyPy or other GCs.
 
         os.kill(pid, signal.SIGKILL)
         if mswindows:

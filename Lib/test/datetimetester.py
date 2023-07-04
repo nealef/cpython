@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """Test date/time type.
 
 See https://www.zope.dev/Members/fdrake/DateTimeWiki/TestCases
@@ -2387,6 +2393,7 @@ class TestDateTime(TestDate):
     # Run with US-style DST rules: DST begins 2 a.m. on second Sunday in
     # March (M3.2.0) and ends 2 a.m. on first Sunday in November (M11.1.0).
     @support.run_with_tz('EST+05EDT,M3.2.0,M11.1.0')
+    @unittest.skipIf(sys.platform == "zos" or sys.platform == "zvm", "z/OS localtime doesn't support negative times")
     def test_timestamp_naive(self):
         t = self.theclass(1970, 1, 1)
         self.assertEqual(t.timestamp(), 18000.0)
@@ -2582,12 +2589,14 @@ class TestDateTime(TestDate):
                               insane)
 
     @unittest.skipIf(sys.platform == "win32", "Windows doesn't accept negative timestamps")
+    @unittest.skipIf(sys.platform == "win32" or sys.platform == "zos" or sys.platform == "zvm", "Windows/zOS doesn't accept negative timestamps")
     def test_negative_float_fromtimestamp(self):
         # The result is tz-dependent; at least test that this doesn't
         # fail (like it did before bug 1646728 was fixed).
         self.theclass.fromtimestamp(-1.05)
 
     @unittest.skipIf(sys.platform == "win32", "Windows doesn't accept negative timestamps")
+    @unittest.skipIf(sys.platform == "win32" or sys.platform == "zos" or sys.platform == "zvm", "Windows/zOS doesn't accept negative timestamps")
     def test_negative_float_utcfromtimestamp(self):
         d = self.theclass.utcfromtimestamp(-1.05)
         self.assertEqual(d, self.theclass(1969, 12, 31, 23, 59, 58, 950000))

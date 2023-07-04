@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """Append module search paths for third-party packages to sys.path.
 
 ****************************************************************
@@ -420,7 +426,7 @@ def setcopyright():
     # PEP 420 for more details.
     if hasattr(os, '__file__'):
         here = os.path.dirname(os.__file__)
-        files.extend(["LICENSE.txt", "LICENSE"])
+        files.extend(["IBM_LICENSE"])
         dirs.extend([os.path.join(here, os.pardir), here, os.curdir])
     builtins.license = _sitebuiltins._Printer(
         "license",

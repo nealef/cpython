@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """ Python Character Mapping Codec cp037 generated from 'MAPPINGS/VENDORS/MICSFT/EBCDIC/CP037.TXT' with gencodec.py.
 
 """#"
@@ -66,7 +72,7 @@ decoding_table = (
     '\x12'     #  0x12 -> DEVICE CONTROL TWO
     '\x13'     #  0x13 -> DEVICE CONTROL THREE
     '\x9d'     #  0x14 -> CONTROL
-    '\x85'     #  0x15 -> CONTROL
+    '\n'     #  0x15 -> CONTROL
     '\x08'     #  0x16 -> BACKSPACE
     '\x87'     #  0x17 -> CONTROL
     '\x18'     #  0x18 -> CANCEL
@@ -82,7 +88,7 @@ decoding_table = (
     '\x82'     #  0x22 -> CONTROL
     '\x83'     #  0x23 -> CONTROL
     '\x84'     #  0x24 -> CONTROL
-    '\n'       #  0x25 -> LINE FEED
+    '\x85'       #  0x25 -> LINE FEED
     '\x17'     #  0x26 -> END OF TRANSMISSION BLOCK
     '\x1b'     #  0x27 -> ESCAPE
     '\x88'     #  0x28 -> CONTROL

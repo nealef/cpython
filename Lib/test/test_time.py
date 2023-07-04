@@ -1,3 +1,8 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2022.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
 from test import support
 from test.support import warnings_helper
 import decimal
@@ -430,6 +435,13 @@ class TimeTestCase(unittest.TestCase):
             except (OverflowError, OSError):
                 pass
             else:
+                if sys.platform == 'zos' or sys.platform == 'zvm':
+                    try:
+                        mkt = time.mktime(tt)
+                    # On z/OS, mktime sets errno to EOVERFLOW
+                    # if time is before January 1, 1970
+                    except (OverflowError):
+                        continue
                 self.assertEqual(time.mktime(tt), t)
 
     # Issue #13309: passing extreme values to mktime() or localtime()
@@ -550,8 +562,9 @@ class TimeTestCase(unittest.TestCase):
             'perf_counter',
             'process_time',
             'time',
-            'thread_time',
         ]
+        if sys.platform != 'zos' or sys.platform == 'zvm':
+            clocks.append('thread_time')
 
         for name in clocks:
             with self.subTest(name=name):
@@ -588,9 +601,18 @@ class TestLocale(unittest.TestCase):
 class _TestAsctimeYear:
     _format = '%d'
 
+    def skip_if_not_supported(y):
+        msg = "yearstr() is limited to [1; 9999] with z/OS"
+        # Check that it doesn't crash for year > 9999
+        if sys.platform == 'zos' or sys.platform == 'zvm':
+            if(y<1 or y>9999):
+                return unittest.skip(msg)
+            else:
+                return unittest.skipIf(false, "within valid range for z")
     def yearstr(self, y):
         return time.asctime((y,) + (0,) * 8).split()[-1]
 
+    @skip_if_not_supported(10000)
     def test_large_year(self):
         # Check that it doesn't crash for year > 9999
         self.assertEqual(self.yearstr(12345), '12345')
@@ -621,8 +643,10 @@ class _TestStrftimeYear:
             self.test_year('%04d', func=year4d)
 
     def skip_if_not_supported(y):
-        msg = "strftime() is limited to [1; 9999] with Visual Studio"
+        msg = "strftime() is limited to [1; 9999] with Visual Studio and z/OS"
         # Check that it doesn't crash for year > 9999
+        if sys.platform == 'zos' or sys.platform == 'zvm':
+            return unittest.skip(msg)
         try:
             time.strftime('%Y', (y,) + (0,) * 8)
         except ValueError:

@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """Provides shared memory for direct access across processes.
 
 The API of this package is currently provisional. Refer to the
@@ -15,24 +21,37 @@ import errno
 import struct
 import secrets
 import types
+import sys
+import sysconfig
 
 if os.name == "nt":
     import _winapi
     _USE_POSIX = False
+    _USE_SYSV = False
+elif sysconfig.get_config_var('HAVE_SEMGET') and not \
+    sysconfig.get_config_var('HAVE_SEM_OPEN'):
+    _USE_SYSV = True
+    _USE_POSIX = False
 else:
     import _posixshmem
     _USE_POSIX = True
+    _USE_SYSV = False
 
 from . import resource_tracker
 
 _O_CREX = os.O_CREAT | os.O_EXCL
 
 # FreeBSD (and perhaps other BSDs) limit names to 14 characters.
+if _USE_SYSV:
+    _SHM_SAFE_NAME_LENGTH = 20
+else:
 _SHM_SAFE_NAME_LENGTH = 14
 
 # Shared memory block name prefix
 if _USE_POSIX:
     _SHM_NAME_PREFIX = '/psm_'
+elif _USE_SYSV:
+    _SHM_NAME_PREFIX = '/tmp/psm_'
 else:
     _SHM_NAME_PREFIX = 'wnsm_'
 
@@ -70,7 +89,7 @@ class SharedMemory:
     _buf = None
     _flags = os.O_RDWR
     _mode = 0o600
-    _prepend_leading_slash = True if _USE_POSIX else False
+    _prepend_leading_slash = True if (_USE_POSIX or _USE_SYSV) else False
 
     def __init__(self, name=None, create=False, size=0):
         if not size >= 0:
@@ -82,7 +101,7 @@ class SharedMemory:
         if name is None and not self._flags & os.O_EXCL:
             raise ValueError("'name' can only be None if create=True")
 
-        if _USE_POSIX:
+        if _USE_POSIX or _USE_SYSV:
 
             # POSIX Shared Memory
 
@@ -90,6 +109,9 @@ class SharedMemory:
                 while True:
                     name = _make_filename()
                     try:
+                        if _USE_SYSV:
+                            self._fd = os.open(name, self._flags, self._mode)
+                        else:
                         self._fd = _posixshmem.shm_open(
                             name,
                             self._flags,
@@ -100,6 +122,12 @@ class SharedMemory:
                     self._name = name
                     break
             else:
+                if _USE_SYSV:
+                    tmpdir = '/tmp'
+                    if not tmpdir in name:
+                        name = '{}/{}'.format(tmpdir, name)
+                    self._fd = os.open(name, self._flags, self._mode)
+                else:
                 name = "/" + name if self._prepend_leading_slash else name
                 self._fd = _posixshmem.shm_open(
                     name,
@@ -213,6 +241,9 @@ class SharedMemory:
         if _USE_POSIX and self._prepend_leading_slash:
             if self._name.startswith("/"):
                 reported_name = self._name[1:]
+        elif _USE_SYSV and self._prepend_leading_slash:
+            if self._name.startswith("/tmp"):
+                reported_name = self._name[5:]
         return reported_name
 
     @property
@@ -229,7 +260,7 @@ class SharedMemory:
         if self._mmap is not None:
             self._mmap.close()
             self._mmap = None
-        if _USE_POSIX and self._fd >= 0:
+        if (_USE_POSIX or _USE_SYSV)and self._fd >= 0:
             os.close(self._fd)
             self._fd = -1
 
@@ -239,8 +270,11 @@ class SharedMemory:
         In order to ensure proper cleanup of resources, unlink should be
         called once (and only once) across all processes which have access
         to the shared memory block."""
-        if _USE_POSIX and self._name:
+        if self._name:
+            if _USE_POSIX:
             _posixshmem.shm_unlink(self._name)
+            elif _USE_SYSV:
+                os.unlink(self._name)
             resource_tracker.unregister(self._name, "shared_memory")
 
 

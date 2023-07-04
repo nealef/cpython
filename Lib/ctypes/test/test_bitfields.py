@@ -34,6 +34,10 @@ func.argtypes = POINTER(BITS), c_char
 class C_Test(unittest.TestCase):
 
     def test_ints(self):
+        b = BITS()
+        name = "M"
+        if func(byref(b), name.encode('ascii')) == 999:
+            self.skipTest("Compiler does not support signed short bitfields")        
         for i in range(512):
             for name in "ABCDEFGHI":
                 b = BITS()

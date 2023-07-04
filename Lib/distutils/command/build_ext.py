@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """distutils.command.build_ext
 
 Implements the Distutils 'build_ext' command, for building extension
@@ -232,7 +238,7 @@ class build_ext(Command):
         # Python's library directory must be appended to library_dirs
         # See Issues: #1600860, #4366
         if (sysconfig.get_config_var('Py_ENABLE_SHARED')):
-            if not sysconfig.python_build:
+            if not sysconfig.python_build and sys.platform != "zos" and sys.platform != 'zvm':
                 # building third party extensions
                 self.library_dirs.append(sysconfig.get_config_var('LIBDIR'))
             else:

@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """Word completion for GNU readline.
 
 The completer completes keywords, built-ins and globals in a selectable
@@ -76,11 +82,6 @@ class Completer:
 
         if not text.strip():
             if state == 0:
-                if _readline_available:
-                    readline.insert_text('\t')
-                    readline.redisplay()
-                    return ''
-                else:
                     return '\t'
             else:
                 return None

@@ -1,3 +1,4 @@
+#!/rocket/conda/bin/python
 """
 A script that replaces an old file with a new one, only if the contents
 actually changed.  If not, the new file is simply deleted.

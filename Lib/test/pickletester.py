@@ -830,7 +830,7 @@ def create_data():
     return x
 
 
-class AbstractUnpickleTests:
+class AbstractUnpickleTests(unittest.TestCase):
     # Subclass must define self.loads.
 
     _testdata = create_data()
@@ -1443,7 +1443,7 @@ class AbstractUnpickleTests:
 
 
 
-class AbstractPickleTests:
+class AbstractPickleTests(unittest.TestCase):
     # Subclass must define self.dumps, self.loads.
 
     optimized = False
@@ -3141,7 +3141,7 @@ class AbstractPickleTests:
             check({1: Clearer(), 2: Clearer()})
 
 
-class BigmemPickleTests:
+class BigmemPickleTests(unittest.TestCase):
 
     # Binary protocols can serialize longs of up to 2 GiB-1
 
@@ -3414,7 +3414,7 @@ class BadGetattr:
         self.foo
 
 
-class AbstractPickleModuleTests:
+class AbstractPickleModuleTests(unittest.TestCase):
 
     def test_dump_closed_file(self):
         f = open(TESTFN, "wb")
@@ -3521,7 +3521,7 @@ class AbstractPickleModuleTests:
         self.check_dumps_loads_oob_buffers(dumps, loads)
 
 
-class AbstractPersistentPicklerTests:
+class AbstractPersistentPicklerTests(unittest.TestCase):
 
     # This class defines persistent_id() and persistent_load()
     # functions that should be used by the pickler.  All even integers
@@ -3561,7 +3561,7 @@ class AbstractPersistentPicklerTests:
             self.assertEqual(self.load_false_count, 1)
 
 
-class AbstractIdentityPersistentPicklerTests:
+class AbstractIdentityPersistentPicklerTests(unittest.TestCase):
 
     def persistent_id(self, obj):
         return obj
@@ -3590,7 +3590,7 @@ class AbstractIdentityPersistentPicklerTests:
         self.assertRaises(pickle.UnpicklingError, self.loads, pickled)
 
 
-class AbstractPicklerUnpicklerObjectTests:
+class AbstractPicklerUnpicklerObjectTests(unittest.TestCase):
 
     pickler_class = None
     unpickler_class = None
@@ -3804,7 +3804,7 @@ class AbstractCustomPicklerClass:
 
         return NotImplemented
 
-class AbstractHookTests:
+class AbstractHookTests(unittest.TestCase):
     def test_pickler_hook(self):
         # test the ability of a custom, user-defined CPickler subclass to
         # override the default reducing routines of any type using the method
@@ -3870,7 +3870,7 @@ class AbstractHookTests:
                 self.assertIsNone(wr())
 
 
-class AbstractDispatchTableTests:
+class AbstractDispatchTableTests(unittest.TestCase):
 
     def test_default_dispatch_table(self):
         # No dispatch_table attribute by default

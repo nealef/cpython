@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 #
 # Module implementing synchronization primitives
 #
@@ -26,6 +32,8 @@ from . import util
 # See issue 3770
 try:
     from _multiprocessing import SemLock, sem_unlink
+    if hasattr(_multiprocessing, 'flags') and 'USING_SYSV_SEMAPHORES' in _multiprocessing.flags:
+        from _multiprocessing import sem_destroy
 except (ImportError):
     raise ImportError("This platform lacks a functioning sem_open" +
                       " implementation, therefore, the required" +
@@ -72,7 +80,7 @@ class SemLock(object):
                 obj._semlock._after_fork()
             util.register_after_fork(self, _after_fork)
 
-        if self._semlock.name is not None:
+        if not unlink_now:
             # We only get here if we are on Unix with forking
             # disabled.  When the object is garbage collected or the
             # process shuts down we unlink the semaphore name
@@ -84,6 +92,9 @@ class SemLock(object):
     @staticmethod
     def _cleanup(name):
         from .resource_tracker import unregister
+        if hasattr(_multiprocessing, 'flags') and 'USING_SYSV_SEMAPHORES' in _multiprocessing.flags:
+            sem_destroy(name)
+        else:
         sem_unlink(name)
         unregister(name, "semaphore")
 

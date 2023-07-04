@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """
 Virtual environment (venv) package for Python. Based on PEP 405.
 
@@ -328,6 +334,13 @@ class EnvBuilder:
         self._call_new_python(context, '-m', 'ensurepip', '--upgrade',
                               '--default-pip', stderr=subprocess.STDOUT)
 
+        if sys.platform == 'zos':
+            binpath = context.bin_path
+            for (dir, _, filelist) in os.walk(binpath):
+                for file in filelist:
+                    if ("pip" in file or "easy_install" in file):
+                        os.set_tagging(os.path.join(dir, file), 819)
+
     def setup_scripts(self, context):
         """
         Set up scripts into the created environment from a directory.
@@ -420,6 +433,10 @@ class EnvBuilder:
                     with open(dstfile, 'wb') as f:
                         f.write(data)
                     shutil.copymode(srcfile, dstfile)
+
+                    if sys.platform == 'zos':
+                        ccsid = os.get_tagging(data[-128:])
+                        os.set_tagging(dstfile, ccsid)
 
     def upgrade_dependencies(self, context):
         logger.debug(

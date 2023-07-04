@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """Wrapper to the POSIX crypt library call and associated functionality."""
 
 import sys as _sys
@@ -43,6 +49,10 @@ def mksalt(method=None, *, rounds=None):
     if not method.ident:  # traditional
         s = ''
     else:  # modular
+        # $ is an invalid salt
+        if _sys.platform == 'zos' or sys.platform == 'zvm' :
+            s = f'{method.ident}'
+        else:
         s = f'${method.ident}$'
 
     if method.ident and method.ident[0] == '2':  # Blowfish variants
@@ -91,7 +101,7 @@ def _add_method(name, *args, rounds=None):
     salt = mksalt(method, rounds=rounds)
     result = None
     try:
-        result = crypt('', salt)
+        result = crypt('a', salt)
     except OSError as e:
         # Not all libc libraries support all encryption methods.
         if e.errno in {errno.EINVAL, errno.EPERM, errno.ENOSYS}:

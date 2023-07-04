@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 import faulthandler
 import functools
 import gc
@@ -180,7 +186,7 @@ def _runtest(ns: Namespace, test_name: str) -> TestResult:
     output_on_failure = ns.verbose3
 
     use_timeout = (ns.timeout is not None)
-    if use_timeout:
+    if use_timeout and os.environ.get('IGNORE_TRACEBACKS') == None:
         faulthandler.dump_traceback_later(ns.timeout, exit=True)
 
     start_time = time.perf_counter()
@@ -225,7 +231,7 @@ def _runtest(ns: Namespace, test_name: str) -> TestResult:
         result.duration_sec = time.perf_counter() - start_time
         return result
     finally:
-        if use_timeout:
+        if use_timeout and os.environ.get('IGNORE_TRACEBACKS') == None:
             faulthandler.cancel_dump_traceback_later()
         support.junit_xml_list = None
 

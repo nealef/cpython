@@ -1,6 +1,13 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """Test script for the grp module."""
 
 import unittest
+import sys
 from test.support import import_helper
 
 
@@ -14,6 +21,10 @@ class GroupDatabaseTestCase(unittest.TestCase):
         self.assertEqual(len(value), 4)
         self.assertEqual(value[0], value.gr_name)
         self.assertIsInstance(value.gr_name, str)
+        if sys.platform == 'zos' or sys.platform == 'zvm':
+            #On z/OS gr_passwd is always empty.
+            self.assertEqual(value[1], None)
+        else:
         self.assertEqual(value[1], value.gr_passwd)
         self.assertIsInstance(value.gr_passwd, str)
         self.assertEqual(value[2], value.gr_gid)

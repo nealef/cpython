@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 import os
 import sys
 import threading
@@ -261,7 +267,10 @@ class DefaultContext(BaseContext):
         if sys.platform == 'win32':
             return ['spawn']
         else:
-            methods = ['spawn', 'fork'] if sys.platform == 'darwin' else ['fork', 'spawn']
+            if sys.platform == 'darwin' or sys.platform == 'zos' or sys.platform == 'zvm' :
+                methods = ['spawn', 'fork']
+            else:
+                methods = ['fork', 'spawn']
             if reduction.HAVE_SEND_HANDLE:
                 methods.append('forkserver')
             return methods
@@ -319,7 +328,7 @@ if sys.platform != 'win32':
         'spawn': SpawnContext(),
         'forkserver': ForkServerContext(),
     }
-    if sys.platform == 'darwin':
+    if sys.platform == 'darwin' or sys.platform == 'zos' or sys.platform == 'zvm' :
         # bpo-33725: running arbitrary code after fork() is no longer reliable
         # on macOS since macOS 10.14 (Mojave). Use spawn by default instead.
         _default_context = DefaultContext(_concrete_contexts['spawn'])

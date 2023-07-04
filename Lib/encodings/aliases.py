@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """ Encoding Aliases Support
 
     This module is used by the encodings package search function to
@@ -62,6 +68,10 @@ aliases = {
     '1026'               : 'cp1026',
     'csibm1026'          : 'cp1026',
     'ibm1026'            : 'cp1026',
+
+    # cp1047 codec
+    '1047'               : 'cp1047',
+    'ibm1047'            : 'cp1047',
 
     # cp1125 codec
     '1125'                : 'cp1125',

@@ -13,6 +13,12 @@
 #endif
 #endif
 
+#ifndef CLOCK_REALTIME
+# define CLOCK_REALTIME    0
+# define CLOCK_MONOTONIC   1
+typedef int clockid_t;
+#endif
+
 #define _PyTime_check_mul_overflow(a, b) \
     (assert(b > 0), \
      (_PyTime_t)(a) < _PyTime_MIN / (_PyTime_t)(b) \
@@ -325,7 +331,7 @@ _PyTime_FromNanosecondsObject(_PyTime_t *tp, PyObject *obj)
     return 0;
 }
 
-#ifdef HAVE_CLOCK_GETTIME
+#if defined(HAVE_CLOCK_GETTIME)
 static int
 pytime_fromtimespec(_PyTime_t *tp, struct timespec *ts, int raise)
 {
@@ -949,6 +955,29 @@ py_get_monotonic_clock(_PyTime_t *tp, _Py_clock_info_t *info, int raise)
         info->adjustable = 0;
     }
 
+#elif defined(__MVS__) || defined(__VM__)
+    struct timeval tv;
+
+    assert(info == NULL || raise);
+
+    if (gettimeofday(&tv, NULL) != 0) {
+	if (raise) {
+	    PyErr_SetFromErrno(PyExc_OSError);
+	    return -1;
+	}
+	return -1;
+    }
+
+    if (info) {
+	info->implementation = "gettimeofday()";
+	info->resolution = 1e-6;
+	info->monotonic = 0;
+	info->adjustable = 1;
+    }
+
+    if (pytime_fromtimeval(tp, &tv, raise) < 0) {
+        return -1;
+    }
 #else
     struct timespec ts;
 #ifdef CLOCK_HIGHRES

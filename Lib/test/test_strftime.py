@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """
 Unittest for time.strftime
 """
@@ -188,7 +194,7 @@ class Y1900Tests(unittest.TestCase):
         # Issue #13674, #19634
         t = (1899, 1, 1, 0, 0, 0, 0, 0, 0)
         if (sys.platform == "win32"
-        or sys.platform.startswith(("aix", "sunos", "solaris"))):
+                or sys.platform.startswith(("aix", "sunos", "solaris", "zos", "zvm"))):
             with self.assertRaises(ValueError):
                 time.strftime("%y", t)
         else:

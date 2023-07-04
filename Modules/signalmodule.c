@@ -1068,6 +1068,14 @@ signal_sigwait_impl(PyObject *module, sigset_t sigset)
 {
     int err, signum;
 
+#ifdef __MVS__
+    Py_BEGIN_ALLOW_THREADS
+    signum = sigwait(&sigset);
+    Py_END_ALLOW_THREADS
+    if (signum < 0) {
+        return PyErr_SetFromErrno(PyExc_OSError);
+    }
+#else
     Py_BEGIN_ALLOW_THREADS
     err = sigwait(&sigset, &signum);
     Py_END_ALLOW_THREADS
@@ -1075,6 +1083,7 @@ signal_sigwait_impl(PyObject *module, sigset_t sigset)
         errno = err;
         return PyErr_SetFromErrno(PyExc_OSError);
     }
+#endif
 
     return PyLong_FromLong(signum);
 }
@@ -1305,8 +1314,13 @@ Send a signal to a thread.
 [clinic start generated code]*/
 
 static PyObject *
+#ifdef __MVS__
+signal_pthread_kill_impl(PyObject *module, uint64_t thread_id,
+                         int signalnum)
+#else
 signal_pthread_kill_impl(PyObject *module, unsigned long thread_id,
                          int signalnum)
+#endif
 /*[clinic end generated code: output=7629919b791bc27f input=1d901f2c7bb544ff]*/
 {
     int err;
@@ -1315,7 +1329,14 @@ signal_pthread_kill_impl(PyObject *module, unsigned long thread_id,
         return NULL;
     }
 
+#ifdef __MVS__
+    pthread_t tid;
+    uint64_t *pTid = (uint64_t *) &tid.__;
+    *pTid = thread_id;
+    err = pthread_kill(tid, signalnum);
+#else
     err = pthread_kill((pthread_t)thread_id, signalnum);
+#endif
     if (err != 0) {
         errno = err;
         PyErr_SetFromErrno(PyExc_OSError);

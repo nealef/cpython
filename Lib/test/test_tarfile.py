@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 import sys
 import os
 import io
@@ -43,6 +49,8 @@ def sha256sum(data):
 TEMPDIR = os.path.abspath(os_helper.TESTFN) + "-tardir"
 tarextdir = TEMPDIR + '-extract-test'
 tarname = support.findfile("testtar.tar")
+zospaxtarname = support.findfile("testtar_z_pax.tar")
+zosustartarname = support.findfile("testtar_z_ustar.tar")
 gzipname = os.path.join(TEMPDIR, "testtar.tar.gz")
 bz2name = os.path.join(TEMPDIR, "testtar.tar.bz2")
 xzname = os.path.join(TEMPDIR, "testtar.tar.xz")
@@ -88,6 +96,17 @@ class LzmaTest:
     open = lzma.LZMAFile if lzma else None
     taropen = tarfile.TarFile.xzopen
 
+class ZosTestPax:
+    tarname = zospaxtarname
+    suffix = ''
+    open = io.FileIO
+    taropen = tarfile.TarFile.taropen
+
+class ZosTestUstar:
+    tarname = zosustartarname
+    suffix = ''
+    open = io.FileIO
+    taropen = tarfile.TarFile.taropen
 
 class ReadTest(TarTest):
 
@@ -1140,6 +1159,32 @@ class PaxReadTest(LongnameTest, ReadTest, unittest.TestCase):
             tar.close()
 
 
+class ReadTestZos():
+    def test_zos_taginfo(self):
+        # Make sure taginfo is correctly extracted as PAX extended attributes.
+        tar = tarfile.open(self.tarname, encoding="iso8859-1")
+        try:
+            tarinfo1 = tar.getmember("ascii")
+            tarinfo2 = tar.getmember("ebcdic")
+            if sys.platform != 'zos':
+                tarinfo3 = tar.getmember("untagged")
+            self.assertEqual(tarinfo1.taginfo, "1 819")
+            self.assertEqual(tarinfo2.taginfo, "1 1047")
+            #A string of "0 0" is avoided for compatibility with z/OS pax 
+            #executables.
+            if sys.platform != 'zos':
+                self.assertEqual(tarinfo3.taginfo, "") 
+        finally:
+            tar.close()
+
+@unittest.skipUnless(sys.platform == "zos" or sys.platform == "zvm","z/OS specific")
+class PaxReadTestZos(ZosTestPax, ReadTestZos, unittest.TestCase):
+    pass
+
+@unittest.skipUnless(sys.platform == "zos" or sys.platform == "zvm","z/OS specific")
+class UstarReadTestZos(ZosTestUstar, ReadTestZos, unittest.TestCase):
+    pass
+
 class WriteTestBase(TarTest):
     # Put all write tests in here that are supposed to be tested
     # in all possible mode combinations.
@@ -1768,6 +1813,58 @@ class CreateTest(WriteTestBase, unittest.TestCase):
         self.assertEqual(len(names), 1)
         self.assertIn('spameggs42', names[0])
 
+    @unittest.skipUnless(sys.platform == "zos" or sys.platform == "zvm","z/OS specific")
+    def test_os390_ustar_tag(self):
+        #Test to check if files of encoding tags can be archived
+        #to the OS390 special USTAR header file and be extracted properly.
+
+        #fileinfo - array of tuple of filename, ccsid number and encoding name.
+        fileinfo = [ ("tagfile-" + str(x), x, y, z)
+                        for x, y, z in [(0, 'cp1047', 1047), (819, 'iso8859-1', 819), (1047, 'cp1047', 1047)]]
+        file_txt = "foo"
+        prev_dir = os.getcwd()
+        tar = tarfile.open(tmpname, "w", format=tarfile.USTAR_FORMAT,
+                               encoding="iso8859-1")
+        os.chdir(TEMPDIR)
+        try:
+            for tagfile, ccsid, encoding, _ in fileinfo:
+                with open(tagfile, "wb") as fobj:
+                    fobj.write(file_txt.encode(encoding))
+                #Add tag.
+                try:
+                    os.set_tagging(tagfile, ccsid=ccsid)
+                except:
+                    self.fail("Error setting tag")
+                tar.add(tagfile)
+        finally:
+            #cleaning up.
+            tar.close()
+            for tagfile, _, _, _ in fileinfo:
+                os.remove(tagfile)
+            os.chdir(prev_dir)
+
+        tar = tarfile.open(tmpname, encoding="iso8859-1")
+        ext_dir = os.path.join(TEMPDIR, 'extracted')
+        tar.extractall(ext_dir)
+        try:
+            for tagfile, ccsid, encoding, exp_ccsid in fileinfo:
+                ext_file_path = os.path.join(ext_dir, tagfile)
+                file_ccsid, file_txt_flag = os.get_tagging_f(ext_file_path)
+                if file_ccsid == 0:
+                    self.assertEqual(file_txt_flag, 0)
+                else:
+                    self.assertEqual(file_txt_flag, 1)
+                self.assertEqual(exp_ccsid, file_ccsid)
+                with open(ext_file_path, "r", encoding=encoding) as fobj:
+                    self.assertEqual(fobj.readline(), file_txt)
+        finally:
+            tar.close()
+            #cleaning up.
+            for tagfile, _, _, _ in fileinfo:
+                os.remove(os.path.join(ext_dir, tagfile))
+            os.rmdir(ext_dir)
+            os.remove(tmpname)
+
 
 class GzipCreateTest(GzipTest, CreateTest):
 
@@ -1930,6 +2027,27 @@ class PaxWriteTest(GNUWriteTest):
         finally:
             tar.close()
 
+    @unittest.skipUnless(sys.platform == "zos" or sys.platform == "zvm","z/OS specific")
+    def test_zos_mtime_format(self):
+        #Test to check if pax header for mtime is written as an integer in z/OS.
+        #This is for compatibility with the z/OS pax executable.
+        tar = tarfile.open(tmpname, "w", format=tarfile.PAX_FORMAT,
+                           encoding="iso8859-1")
+        try:
+            t = tarfile.TarInfo()
+            t.name = "example.file"
+            t.mtime = 123456789012.0
+            tar.addfile(t)
+        finally:
+            tar.close()
+
+        tar = tarfile.open(tmpname, encoding="iso8859-1")
+        try:
+            t = tar.getmembers()[0]
+            self.assertEqual(t.pax_headers["mtime"], "123456789012")
+        finally:
+            tar.close()
+
     def test_create_pax_header(self):
         # The ustar header should contain values that can be
         # represented reasonably, even if a better (e.g. higher
@@ -1952,6 +2070,17 @@ class PaxWriteTest(GNUWriteTest):
         self.assertEqual(info['size'], 100)
         self.assertEqual(info['uid'], 123)
         self.assertEqual(info['gid'], 124)
+        if sys.platform == 'zos'  or sys.platform == 'zvm':
+            #Compatibility with z/OS tools requires mtime to be rounded to the nearest whole number
+            #in both the PAX and USTAR headers.
+            self.assertEqual(header,
+                b'././@PaxHeader' + bytes(86) \
+                + b'0000000\x000000000\x000000000\x0000000000016\x0000000000000\x00010212\x00 x' \
+                + bytes(100) + b'ustar\x0000'+ bytes(247) \
+                + b'14 mtime=1000\n' + bytes(498) + b'foo' + bytes(97) \
+                + b'0000644\x000000173\x000000174\x0000000000144\x0000000001750\x00006516\x00 0' \
+                + bytes(100) + b'ustar\x0000' + bytes(247))
+        else:
         self.assertEqual(header,
             b'././@PaxHeader' + bytes(86) \
             + b'0000000\x000000000\x000000000\x0000000000020\x0000000000000\x00010205\x00 x' \
@@ -2309,6 +2438,16 @@ class LimitsTest(unittest.TestCase):
         # uid > 8 digits
         tarinfo = tarfile.TarInfo("name")
         tarinfo.uid = 0o10000000
+        if sys.platform == 'zos' or sys.platform == 'zvm':
+            #z/OS tar truncates large uid and gid values so it will not raise
+            #an exception.
+            max_digits = 8 - 1 #Max digits allowed for uid.
+            truncate_uid = tarinfo.uid % (8 ** 7 - 1)
+            header = tarinfo.tobuf(tarfile.USTAR_FORMAT)
+            tarinfo_trunc = tarfile.TarInfo.frombuf(header,
+                                              "iso8859-1", "strict")
+            self.assertEqual(tarinfo_trunc.uid, truncate_uid)
+        else:
         self.assertRaises(ValueError, tarinfo.tobuf, tarfile.USTAR_FORMAT)
 
     def test_gnu_limits(self):
@@ -2418,7 +2557,9 @@ class MiscTest(unittest.TestCase):
             "fully_trusted_filter", "data_filter",
             "tar_filter", "FilterError", "AbsoluteLinkError",
             "OutsideDestinationError", "SpecialFileError", "AbsolutePathError",
-            "LinkOutsideDestinationError",
+            "LinkOutsideDestinationError", 'OS390_USTAR_HEADER',
+            'OS390_TAGINFO_KEYWORD', 'OS390HEADERTYPE', 'ZOS_PAX_FIELDS',
+            'OS390_HEADER_TYPES', 'OS390_PATH_PREFIX', 'OS390_APPLYTO_KEYWORD'}
             }
         support.check__all__(self, tarfile, not_exported=not_exported)
 

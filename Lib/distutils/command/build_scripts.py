@@ -1,8 +1,15 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """distutils.command.build_scripts
 
 Implements the Distutils 'build_scripts' command."""
 
 import os, re
+import sys
 from stat import ST_MODE
 from distutils import sysconfig
 from distutils.core import Command
@@ -105,6 +112,16 @@ class build_scripts(Command):
                                            sysconfig.get_config_var("EXE")))
                     executable = os.fsencode(executable)
                     shebang = b"#!" + executable + post_interp + b"\n"
+
+                    # Zos users won't be able to install python using `make
+                    # install` cmd. Setting shebang to pythonX.Y should
+                    # allow the system to find the correct python executable.
+                    if sys.platform == "zos" or sys.platform == "zvm" and sysconfig.python_build:
+                        version = sysconfig.get_config_var("VERSION")
+                        executable = "python%s" % version
+                        executable = os.fsencode(executable)
+                        shebang = b"#!/bin/env " + executable + b"\n"
+
                     # Python parser starts to read a script using UTF-8 until
                     # it gets a #coding:xxx cookie. The shebang has to be the
                     # first line of a file, the #coding:xxx cookie cannot be

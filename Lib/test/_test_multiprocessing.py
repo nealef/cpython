@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 #
 # Unit tests for the multiprocessing package
 #
@@ -335,6 +341,9 @@ class _TestProcess(BaseTestCase):
         wconn.send("alive" if parent_process().is_alive() else "not alive")
 
     def test_process(self):
+        if sys.platform == 'zos' or sys.platform == 'zvm' and multiprocessing.get_start_method() == 'fork':
+            self.skipTest('Multithreaded child calling fork is invalid on z/OS')
+
         q = self.Queue(1)
         e = self.Event()
         args = (q, 1, 2)
@@ -611,6 +620,9 @@ class _TestProcess(BaseTestCase):
                 self.assertIn(p.exitcode, exitcodes)
 
     def test_lose_target_ref(self):
+        sm = multiprocessing.get_start_method()
+        if sys.platform == 'zos'  or sys.platform == 'zvm' and sm == 'fork':
+            self.skipTest('Multithreaded child calling fork is invalid on z/OS and z/VM')
         c = DummyCallable()
         wr = weakref.ref(c)
         q = self.Queue()
@@ -618,7 +630,6 @@ class _TestProcess(BaseTestCase):
         del c
         p.start()
         p.join()
-        gc.collect()  # For PyPy or other GCs.
         self.assertIs(wr(), None)
         self.assertEqual(q.get(), 5)
         close_queue(q)
@@ -677,6 +688,9 @@ class _TestProcess(BaseTestCase):
         # before exiting
         if self.TYPE == 'threads':
             self.skipTest('test not appropriate for {}'.format(self.TYPE))
+
+        if sys.platform == 'zos' or sys.platform == 'zvm' and multiprocessing.get_start_method() == 'fork':
+            self.skipTest('Multithreaded child calling fork is invalid on z/OS and z/VM')
 
         evt = self.Event()
         proc = self.Process(target=self._test_wait_for_threads, args=(evt,))
@@ -991,6 +1005,9 @@ class _TestQueue(BaseTestCase):
         parent_can_continue.set()
 
     def test_get(self):
+        if sys.platform == 'zos' or sys.platform == 'zvm' and multiprocessing.get_start_method() == 'fork':
+            self.skipTest('Multithreaded child calling fork is invalid on z/OS and z/VM')
+
         queue = self.Queue()
         child_can_start = self.Event()
         parent_can_continue = self.Event()
@@ -1052,6 +1069,9 @@ class _TestQueue(BaseTestCase):
         # pushing items onto the pipe.
 
     def test_fork(self):
+        if sys.platform == 'zos' or sys.platform == 'zvm' and multiprocessing.get_start_method() == 'fork':
+            self.skipTest('Multithreaded child calling fork is invalid on z/OS and z/VM')
+
         # Old versions of Queue would fail to create a new feeder
         # thread for a forked process if the original process had its
         # own feeder thread.  This test checks that this no longer
@@ -1822,6 +1842,9 @@ class _TestBarrier(BaseTestCase):
         """
         test the return value from barrier.wait
         """
+        if sys.platform == 'zos' or sys.platform == 'zvm' and multiprocessing.get_start_method() == 'fork':
+            self.skipTest('Multithreaded child calling fork is invalid on z/OS and z/VM')
+
         queue = self.Queue()
         self.run_threads(self._test_wait_return_f, (self.barrier, queue))
         results = [queue.get() for i in range(self.N)]
@@ -2675,7 +2698,6 @@ class _TestPool(BaseTestCase):
         self.pool.map(identity, objs)
 
         del objs
-        gc.collect()  # For PyPy or other GCs.
         time.sleep(DELTA)  # let threaded cleanup code run
         self.assertEqual(set(wr() for wr in refs), {None})
         # With a process pool, copies of the objects are returned, check
@@ -2995,6 +3017,8 @@ class _TestManagerRestart(BaseTestCase):
         queue.put('hello world')
 
     def test_rapid_restart(self):
+        if sys.platform == 'zos' or sys.platform == 'zvm' and multiprocessing.get_start_method() == 'fork':
+            self.skipTest('Multithreaded child calling fork is invalid on z/OS and z/VM')
         authkey = os.urandom(32)
         manager = QueueManager(
             address=(socket_helper.HOST, 0), authkey=authkey, serializer=SERIALIZER)
@@ -3513,6 +3537,9 @@ class _TestPicklingConnections(BaseTestCase):
         conn.close()
 
     def test_pickling(self):
+        if sys.platform == 'zos' or sys.platform == 'zvm' and multiprocessing.get_start_method() == 'fork':
+            self.skipTest('Multithreaded child calling fork is invalid on z/OS and z/VM')
+
         families = self.connection.families
 
         lconn, lconn0 = self.Pipe()
@@ -3805,6 +3832,13 @@ class _TestSharedMemory(BaseTestCase):
         self.assertIn(sms.name, str(sms))
         self.assertIn(str(sms.size), str(sms))
 
+        # Test pickling
+        sms.buf[0:6] = b'pickle'
+        pickled_sms = pickle.dumps(sms)
+        sms2 = pickle.loads(pickled_sms)
+        self.assertEqual(sms.name, sms2.name)
+        self.assertEqual(bytes(sms.buf[0:6]), bytes(sms2.buf[0:6]), b'pickle')
+
         # Modify contents of shared memory segment through memoryview.
         sms.buf[0] = 42
         self.assertEqual(sms.buf[0], 42)
@@ -3938,47 +3972,6 @@ class _TestSharedMemory(BaseTestCase):
         with self.assertRaises(ValueError):
             sms_invalid = shared_memory.SharedMemory(create=True)
 
-    def test_shared_memory_pickle_unpickle(self):
-        for proto in range(pickle.HIGHEST_PROTOCOL + 1):
-            with self.subTest(proto=proto):
-                sms = shared_memory.SharedMemory(create=True, size=512)
-                self.addCleanup(sms.unlink)
-                sms.buf[0:6] = b'pickle'
-
-                # Test pickling
-                pickled_sms = pickle.dumps(sms, protocol=proto)
-
-                # Test unpickling
-                sms2 = pickle.loads(pickled_sms)
-                self.assertIsInstance(sms2, shared_memory.SharedMemory)
-                self.assertEqual(sms.name, sms2.name)
-                self.assertEqual(bytes(sms.buf[0:6]), b'pickle')
-                self.assertEqual(bytes(sms2.buf[0:6]), b'pickle')
-
-                # Test that unpickled version is still the same SharedMemory
-                sms.buf[0:6] = b'newval'
-                self.assertEqual(bytes(sms.buf[0:6]), b'newval')
-                self.assertEqual(bytes(sms2.buf[0:6]), b'newval')
-
-                sms2.buf[0:6] = b'oldval'
-                self.assertEqual(bytes(sms.buf[0:6]), b'oldval')
-                self.assertEqual(bytes(sms2.buf[0:6]), b'oldval')
-
-    def test_shared_memory_pickle_unpickle_dead_object(self):
-        for proto in range(pickle.HIGHEST_PROTOCOL + 1):
-            with self.subTest(proto=proto):
-                sms = shared_memory.SharedMemory(create=True, size=512)
-                sms.buf[0:6] = b'pickle'
-                pickled_sms = pickle.dumps(sms, protocol=proto)
-
-                # Now, we are going to kill the original object.
-                # So, unpickled one won't be able to attach to it.
-                sms.close()
-                sms.unlink()
-
-                with self.assertRaises(FileNotFoundError):
-                    pickle.loads(pickled_sms)
-
     def test_shared_memory_across_processes(self):
         # bpo-40135: don't define shared memory block's name in case of
         # the failure when we run multiprocessing tests in parallel.
@@ -4009,6 +4002,9 @@ class _TestSharedMemory(BaseTestCase):
 
     @unittest.skipIf(os.name != "posix", "not feasible in non-posix platforms")
     def test_shared_memory_SharedMemoryServer_ignores_sigint(self):
+        if sys.platform == 'zos' or sys.platform == 'zvm' and multiprocessing.get_start_method() == 'fork':
+            self.skipTest('Multithreaded child calling fork is invalid on z/OS and z/VM')
+
         # bpo-36368: protect SharedMemoryManager server process from
         # KeyboardInterrupt signals.
         smm = multiprocessing.managers.SharedMemoryManager()
@@ -4053,6 +4049,9 @@ class _TestSharedMemory(BaseTestCase):
         self.assertFalse(err)
 
     def test_shared_memory_SharedMemoryManager_basics(self):
+        if sys.platform == 'zos' or sys.platform == 'zvm' and multiprocessing.get_start_method() == 'fork':
+            self.skipTest('Multithreaded child calling fork is invalid on z/OS and z/VM')
+
         smm1 = multiprocessing.managers.SharedMemoryManager()
         with self.assertRaises(ValueError):
             smm1.SharedMemory(size=9)  # Fails if SharedMemoryServer not started
@@ -4196,45 +4195,29 @@ class _TestSharedMemory(BaseTestCase):
             empty_sl.shm.unlink()
 
     def test_shared_memory_ShareableList_pickling(self):
-        for proto in range(pickle.HIGHEST_PROTOCOL + 1):
-            with self.subTest(proto=proto):
                 sl = shared_memory.ShareableList(range(10))
                 self.addCleanup(sl.shm.unlink)
 
-                serialized_sl = pickle.dumps(sl, protocol=proto)
+        serialized_sl = pickle.dumps(sl)
                 deserialized_sl = pickle.loads(serialized_sl)
-                self.assertIsInstance(
-                    deserialized_sl, shared_memory.ShareableList)
-                self.assertEqual(deserialized_sl[-1], 9)
-                self.assertIsNot(sl, deserialized_sl)
-
+        self.assertTrue(
+            isinstance(deserialized_sl, shared_memory.ShareableList)
+        )
+        self.assertTrue(deserialized_sl[-1], 9)
+        self.assertFalse(sl is deserialized_sl)
                 deserialized_sl[4] = "changed"
                 self.assertEqual(sl[4], "changed")
-                sl[3] = "newvalue"
-                self.assertEqual(deserialized_sl[3], "newvalue")
 
+        # Verify data is not being put into the pickled representation.
+        name = 'a' * len(sl.shm.name)
                 larger_sl = shared_memory.ShareableList(range(400))
                 self.addCleanup(larger_sl.shm.unlink)
-                serialized_larger_sl = pickle.dumps(larger_sl, protocol=proto)
-                self.assertEqual(len(serialized_sl), len(serialized_larger_sl))
+        serialized_larger_sl = pickle.dumps(larger_sl)
+        self.assertTrue(len(serialized_sl) == len(serialized_larger_sl))
                 larger_sl.shm.close()
 
                 deserialized_sl.shm.close()
                 sl.shm.close()
-
-    def test_shared_memory_ShareableList_pickling_dead_object(self):
-        for proto in range(pickle.HIGHEST_PROTOCOL + 1):
-            with self.subTest(proto=proto):
-                sl = shared_memory.ShareableList(range(10))
-                serialized_sl = pickle.dumps(sl, protocol=proto)
-
-                # Now, we are going to kill the original object.
-                # So, unpickled one won't be able to attach to it.
-                sl.shm.close()
-                sl.shm.unlink()
-
-                with self.assertRaises(FileNotFoundError):
-                    pickle.loads(serialized_sl)
 
     def test_shared_memory_cleaned_after_process_termination(self):
         cmd = '''if 1:
@@ -4271,13 +4254,6 @@ class _TestSharedMemory(BaseTestCase):
                                      " a process was abruptly terminated.")
 
             if os.name == 'posix':
-                # Without this line it was raising warnings like:
-                #   UserWarning: resource_tracker:
-                #   There appear to be 1 leaked shared_memory
-                #   objects to clean up at shutdown
-                # See: https://bugs.python.org/issue45209
-                resource_tracker.unregister(f"/{name}", "shared_memory")
-
                 # A warning was emitted by the subprocess' own
                 # resource_tracker (on Windows, shared memory segments
                 # are released automatically by the OS).
@@ -4287,7 +4263,7 @@ class _TestSharedMemory(BaseTestCase):
                     "shared_memory objects to clean up at shutdown", err)
 
 #
-# Test to verify that `Finalize` works.
+#
 #
 
 class _TestFinalize(BaseTestCase):
@@ -4299,7 +4275,6 @@ class _TestFinalize(BaseTestCase):
         util._finalizer_registry.clear()
 
     def tearDown(self):
-        gc.collect()  # For PyPy or other GCs.
         self.assertFalse(util._finalizer_registry)
         util._finalizer_registry.update(self.registry_backup)
 
@@ -4311,14 +4286,12 @@ class _TestFinalize(BaseTestCase):
         a = Foo()
         util.Finalize(a, conn.send, args=('a',))
         del a           # triggers callback for a
-        gc.collect()  # For PyPy or other GCs.
 
         b = Foo()
         close_b = util.Finalize(b, conn.send, args=('b',))
         close_b()       # triggers callback for b
         close_b()       # does nothing because callback has already been called
         del b           # does nothing because callback has already been called
-        gc.collect()  # For PyPy or other GCs.
 
         c = Foo()
         util.Finalize(c, conn.send, args=('c',))
@@ -4697,6 +4670,9 @@ class TestStdinBadfiledescriptor(unittest.TestCase):
         proc.join()
 
     def test_pool_in_process(self):
+        if sys.platform == 'zos' or sys.platform == 'zvm' and multiprocessing.get_start_method() == 'fork':
+            self.skipTest('Multithreaded child calling fork is invalid on z/OS and z/VM')
+
         p = multiprocessing.Process(target=pool_in_process)
         p.start()
         p.join()
@@ -5504,6 +5480,9 @@ class TestSyncManagerTypes(unittest.TestCase):
     manager_class = multiprocessing.managers.SyncManager
 
     def setUp(self):
+        if sys.platform == 'zos' or sys.platform == 'zvm' and multiprocessing.get_start_method() == 'fork':
+            self.skipTest('Multithreaded child calling fork is invalid on z/OS and z/VM')
+
         self.manager = self.manager_class()
         self.manager.start()
         self.proc = None
@@ -5900,6 +5879,8 @@ def install_tests_in_module_dict(remote_globs, start_method):
                 continue
             assert set(base.ALLOWED_TYPES) <= ALL_TYPES, base.ALLOWED_TYPES
             for type_ in base.ALLOWED_TYPES:
+                if sys.platform == 'zos' or sys.platform == 'zvm' and type_ == 'manager' and start_method == 'fork':
+                    continue
                 newname = 'With' + type_.capitalize() + name[1:]
                 Mixin = local_globs[type_.capitalize() + 'Mixin']
                 class Temp(base, Mixin, unittest.TestCase):

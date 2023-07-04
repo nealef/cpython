@@ -1361,7 +1361,7 @@ set_inheritable(int fd, int inheritable, int raise, int *atomic_flag_works)
 
 #else
 
-#if defined(HAVE_SYS_IOCTL_H) && defined(FIOCLEX) && defined(FIONCLEX)
+#if defined(HAVE_SYS_IOCTL_H) && defined(FIOCLEX) && defined(FIONCLEX) && !defined(__MVS__) && !defined(__VM__)
     if (ioctl_works != 0 && raise != 0) {
         /* fast-path: ioctl() only requires one syscall */
         /* caveat: raise=0 is an indicator that we must be async-signal-safe

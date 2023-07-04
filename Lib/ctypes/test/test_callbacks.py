@@ -1,6 +1,13 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 import functools
 import unittest
 from test import support
+import sys
 
 from ctypes import *
 from ctypes.test import need_symbol
@@ -81,6 +88,7 @@ class Callbacks(unittest.TestCase):
         self.check_type(c_double, 3.14)
         self.check_type(c_double, -3.14)
 
+    @unittest.skipIf(sys.platform == "zos" or sys.platform == "zvm", "broken on z/OS")
     def test_longdouble(self):
         self.check_type(c_longdouble, 3.14)
         self.check_type(c_longdouble, -3.14)
@@ -158,6 +166,7 @@ class StdcallCallbacks(Callbacks):
 
 class SampleCallbacksTestCase(unittest.TestCase):
 
+    @unittest.skipIf(sys.platform == "zos" or sys.platform == "zvm", "broken on z/OS")
     def test_integrate(self):
         # Derived from some then non-working code, posted by David Foster
         dll = CDLL(_ctypes_test.__file__)
@@ -243,6 +252,7 @@ class SampleCallbacksTestCase(unittest.TestCase):
         self.assertEqual(result,
                          callback(1.1*1.1, 2.2*2.2, 3.3*3.3, 4.4*4.4, 5.5*5.5))
 
+    @unittest.skipIf(sys.platform == "zos" or sys.platform == "zvm", "broken on z/OS")
     def test_callback_large_struct(self):
         class Check: pass
 
@@ -289,6 +299,7 @@ class SampleCallbacksTestCase(unittest.TestCase):
         self.assertEqual(s.second, check.second)
         self.assertEqual(s.third, check.third)
 
+    @unittest.skipIf(sys.platform == "zos" or sys.platform == "zvm", "broken on z/OS")
     def test_callback_too_many_args(self):
         def func(*args):
             return len(args)

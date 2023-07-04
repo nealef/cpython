@@ -1,3 +1,10 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
+import sys
 import os
 import unittest
 import random
@@ -75,6 +82,7 @@ class ThreadRunningTests(BasicThreadTest):
         self.assertEqual(thread.stack_size(), 0, "stack_size not reset to default")
 
     @unittest.skipIf(os.name not in ("nt", "posix"), 'test meant for nt and posix')
+    @unittest.skipIf(sys.platform in ("zos", "zvm"), "platform doesn't support small stack sizes")
     def test_nt_and_posix_stack_size(self):
         try:
             thread.stack_size(4096)
@@ -132,7 +140,6 @@ class ThreadRunningTests(BasicThreadTest):
             del task
             while not done:
                 time.sleep(POLL_SLEEP)
-                support.gc_collect()  # For PyPy or other GCs.
             self.assertEqual(thread._count(), orig)
 
     def test_unraisable_exception(self):

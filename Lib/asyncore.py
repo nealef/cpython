@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 # -*- Mode: Python -*-
 #   Id: asyncore.py,v 2.51 2000/09/07 22:29:26 rushing Exp
 #   Author: Sam Rushing <rushing@nightmare.com>
@@ -109,15 +115,17 @@ def _exception(obj):
     except:
         obj.handle_error()
 
-def readwrite(obj, flags):
+def readwrite(obj, flags, map=None):
     try:
-        if flags & select.POLLIN:
+        have_fileno = not map or obj._fileno in map
+
+        if have_fileno and flags & select.POLLIN:
             obj.handle_read_event()
-        if flags & select.POLLOUT:
+        if have_fileno and flags & select.POLLOUT:
             obj.handle_write_event()
-        if flags & select.POLLPRI:
+        if have_fileno and flags & select.POLLPRI:
             obj.handle_expt_event()
-        if flags & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
+        if have_fileno and flags & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
             obj.handle_close()
     except OSError as e:
         if e.errno not in _DISCONNECTED:

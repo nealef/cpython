@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """This script contains the actual auditing tests.
 
 It should not be imported directly, but should be run by the test_audit
@@ -212,13 +218,14 @@ def test_open():
 
     actual_mode = [(a[0], a[1]) for e, a in hook.seen if e == "open" and a[1]]
     actual_flag = [(a[0], a[2]) for e, a in hook.seen if e == "open" and not a[1]]
+    
     assertSequenceEqual(
         [
             i
             for i in [
                 (sys.argv[2], "r"),
-                (sys.executable, "r"),
-                (3, "w"),
+                (sys.executable, "rb"),
+                (3, "wb"),
                 (sys.argv[2], "w"),
                 (sys.argv[2], "rb") if load_dh_params else None,
             ]

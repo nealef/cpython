@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """zipimport provides support for importing Python modules from Zip archives.
 
 This module exports three objects:
@@ -83,6 +89,11 @@ class zipimporter(_bootstrap_external._LoaderBasics):
                 path = dirname
                 prefix.append(basename)
             else:
+                if sys.platform == 'zos' or sys.platform == 'zvm':
+                    if (st.st_mode & 0xFF000000) != 0x03000000:  # stat.S_ISREG
+                        # it's a not file
+                        raise ZipImportError('not a Zip file', path=path)
+                else:
                 # it exists
                 if (st.st_mode & 0o170000) != 0o100000:  # stat.S_ISREG
                     # it's a not file
@@ -334,7 +345,7 @@ class zipimporter(_bootstrap_external._LoaderBasics):
             _zip_directory_cache[self.archive] = self._files
         except ZipImportError:
             _zip_directory_cache.pop(self.archive, None)
-            self._files = {}
+            self._files = None
 
 
     def __repr__(self):

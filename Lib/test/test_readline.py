@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """
 Very minimal unittests for parts of the readline module.
 """
@@ -255,9 +261,7 @@ print("history", ascii(readline.get_history_item(1)))
             self.assertIn(b"matches ['t\\xebnt', 't\\xebxt']\r\n", output)
         expected = br"'[\xefnserted]|t\xebxt[after]'"
         self.assertIn(b"result " + expected + b"\r\n", output)
-        # bpo-45195: Sometimes, the newline character is not written at the
-        # end, so don't expect it in the output.
-        self.assertIn(b"history " + expected, output)
+        self.assertIn(b"history " + expected + b"\r\n", output)
 
     # We have 2 reasons to skip this test:
     # - readline: history size was added in 6.0
@@ -316,8 +320,9 @@ def run_pty(script, input=b"dummy input\r", env=None):
         def terminate(proc):
             try:
                 proc.terminate()
-            except ProcessLookupError:
+            except (ProcessLookupError, PermissionError):
                 # Workaround for Open/Net BSD bug (Issue 16762)
+                # z/OS throws a permission error when killing an already dead process
                 pass
         cleanup.callback(terminate, proc)
         cleanup.callback(os.close, master)

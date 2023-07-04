@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """Unit tests for the bytes and bytearray types.
 
 XXX This is a mess.  Common tests should be unified with string_tests.py (and
@@ -1084,8 +1090,8 @@ class BytesTest(BaseBytesTest, unittest.TestCase):
                 return '%#x' % ptr
 
         ptr = 0xabcdef
-        self.assertEqual(PyBytes_FromFormat(b'ptr=%p', c_char_p(ptr)),
-                         ('ptr=' + ptr_formatter(ptr)).encode('ascii'))
+        self.assertEqual(PyBytes_FromFormat(b'ptr=%p', c_char_p(ptr)).upper(),
+                         ('ptr=' + ptr_formatter(ptr)).encode('ascii').upper())
         self.assertEqual(PyBytes_FromFormat(b's=%s', c_char_p(b'cstr')),
                          b's=cstr')
 
@@ -1102,8 +1108,8 @@ class BytesTest(BaseBytesTest, unittest.TestCase):
             (b'%zu', c_size_t, size_max, str),
             (b'%p', c_char_p, size_max, ptr_formatter),
         ):
-            self.assertEqual(PyBytes_FromFormat(formatstr, ctypes_type(value)),
-                             py_formatter(value).encode('ascii')),
+            self.assertEqual(PyBytes_FromFormat(formatstr, ctypes_type(value)).upper(),
+                             py_formatter(value).encode('ascii').upper()),
 
         # width and precision (width is currently ignored)
         self.assertEqual(PyBytes_FromFormat(b'%5s', b'a'),

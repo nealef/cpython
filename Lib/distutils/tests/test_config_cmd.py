@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """Tests for distutils.command.config."""
 import unittest
 import os
@@ -50,7 +56,7 @@ class ConfigTestCase(support.LoggingSilencer,
         cmd = config(dist)
         cmd._check_compiler()
         compiler = cmd.compiler
-        if sys.platform[:3] == "aix" and "xlc" in compiler.preprocessor[0].lower():
+        if (sys.platform[:3] == "aix" or sys.platform == 'zos' or sys.platform == 'zvm') and "xlc" in compiler.preprocessor[0].lower():
             self.skipTest('xlc: The -E option overrides the -P, -o, and -qsyntaxonly options')
 
         # simple pattern searches

@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """Common operations on Posix pathnames.
 
 Instead of importing this module directly, import os and refer to
@@ -453,6 +459,12 @@ def _joinrealpath(path, rest, strict, seen):
                 # Return already resolved part + rest of the path unchanged.
                 return join(newpath, rest), False
         seen[newpath] = None # not resolved symlink
+        if sys.platform == 'zos':
+            try:
+                path, ok = _joinrealpath(path, os.zos_realpath(newpath), strict, seen)
+            except (FileNotFoundError, OSError):
+                path, ok = _joinrealpath(path, os.readlink(newpath), strict, seen)
+        else:
         path, ok = _joinrealpath(path, os.readlink(newpath), strict, seen)
         if not ok:
             return join(path, rest), False

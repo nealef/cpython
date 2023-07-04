@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """
 Read and write ZIP files.
 
@@ -809,6 +815,8 @@ class ZipExtFile(io.BufferedIOBase):
 
         self.mode = mode
         self.name = zipinfo.filename
+
+        self.zos_filemode = zipinfo.external_attr >> 16
 
         if hasattr(zipinfo, 'CRC'):
             self._expected_crc = zipinfo.CRC
@@ -1879,6 +1887,17 @@ class ZipFile:
                 min_version = max(BZIP2_VERSION, min_version)
             elif zinfo.compress_type == ZIP_LZMA:
                 min_version = max(LZMA_VERSION, min_version)
+
+            # If external_attr is greater than the max, it was packed wrong by wheel
+            # The pack size for external_attr is "L" (last portion of structCentralDir)
+            # which is a 32bit int. This check is safe to do as if it's greater than
+            # a 32bit int, the pack will fail regardless
+            if zinfo.external_attr > 4294967295 and (sys.platform == 'zos' or sys.platform == 'zvm'):
+                shifted_back = zinfo.external_attr >> 16
+                imode = stat.S_IMODE(shifted_back)
+                ifmt = stat.S_IFMT(shifted_back)
+
+                zinfo.external_attr = (imode << 16) | ifmt
 
             extract_version = max(min_version, zinfo.extract_version)
             create_version = max(min_version, zinfo.create_version)

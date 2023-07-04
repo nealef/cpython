@@ -451,6 +451,113 @@ lcg_urandom(unsigned int x0, unsigned char *buffer, size_t size)
     }
 }
 
+#ifdef __VM__
+#define PRNG_LIMIT 4096
+#define KMC_PRNG   67
+
+static const uint8_t prngIV[] =                   
+ { 0x0f, 0x2b, 0x8e, 0x63, 0x8c, 0x8e, 0xd2, 0x52,
+   0x64, 0xb7, 0xa0, 0x7b, 0x75, 0x28, 0xb8, 0xf4,
+   0x75, 0x5f, 0xd2, 0xa6, 0x8d, 0x97, 0x11, 0xff,
+   0x49, 0xd8, 0x23, 0xf3, 0x7e, 0x21, 0xec, 0xa0 
+ };                                               
+                                                  
+static uint8_t *prngCV = NULL;                    
+                                                  
+static int prngCount = PRNG_LIMIT;                
+
+static inline void
+vm_kmc(int func, void *cv, void *in, int size, void *out)
+{
+    asm ("       lr     0,%[func]\n"
+         "       lr     1,%[cv]\n"
+         "       lr     2,%[in]\n"
+         "       lr     3,%[size]\n"
+         "       lr     14,%[out]\n"
+	 "	 kmc    14,2\n"
+	 "	 jo	*-4\n"
+         : : [func] "r" (func), [cv] "r" (cv), 
+	     [in] "r" (in), [size] "r" (size), 
+	     [out] "r" (out) 
+         : "cc", "0", "1", "2", "3", "14");
+}
+
+static inline uint32_t
+vm_noise()
+{
+    uint32_t noise;
+    struct {
+        uint8_t  epoch;
+        uint8_t  tod[13];
+        uint8_t  prog[2];
+    } todclk __attribute__((__aligned__(8)));
+
+    asm ("         stcke %0\n"            
+         "         icm   %1,15,%0\n"
+         : "=m" (todclk.tod[5]), "=r" (noise) : : "cc");
+
+    return noise;
+}
+
+static void                                                                     
+kmc_prng(void *out, int len)                                                    
+{                                                                               
+    int nRounds = len / sizeof(prngIV),                                         
+        lastRnd = sizeof(prngIV) - (len % sizeof(prngIV));                      
+    uint32_t rnd[8] __attribute__((__aligned__(8)));                            
+                                                                                
+    /*                                                                          
+     * Initialize PRNG vector if not present                                    
+     */                                                                         
+    if (prngCV == NULL) {                                                       
+        prngCV = malloc(sizeof(prngIV));                                       
+        memcpy(prngCV, prngIV, sizeof(prngIV));                                 
+    }                                                                           
+                                                                                
+    /*                                                                          
+     * If we need to renew vector then generate entropy                         
+     * based on the current vector                                              
+     */                                                                         
+    if (prngCount == PRNG_LIMIT) {                                              
+        rnd[0] = vm_noise(); rnd[1] = vm_noise(); 
+	rnd[2] = vm_noise(); rnd[3] = vm_noise(); 
+        rnd[4] = vm_noise(); rnd[5] = vm_noise(); 
+	rnd[6] = vm_noise(); rnd[7] = vm_noise(); 
+        vm_kmc(KMC_PRNG, prngCV, &rnd, sizeof(rnd), &rnd);                         
+        memcpy(prngCV, &rnd, sizeof(rnd));                                      
+        prngCount = 0;                                                          
+    }                                                                           
+                                                                                
+    /*                                                                          
+     * Run PRNG on blocks of vector size                                        
+     */                                                                         
+    for (int i = 0; i < nRounds; i++) {                                         
+        rnd[0] = vm_noise(); rnd[1] = vm_noise(); 
+	rnd[2] = vm_noise(); rnd[3] = vm_noise(); 
+        rnd[4] = vm_noise(); rnd[5] = vm_noise(); 
+	rnd[6] = vm_noise(); rnd[7] = vm_noise(); 
+        vm_kmc(KMC_PRNG, prngCV, &rnd, sizeof(rnd), &rnd);                         
+        memcpy(out, &rnd, sizeof(rnd));                                         
+        out += (uintptr_t) sizeof(rnd);                                         
+        prngCount += sizeof(prngCV);                                            
+    }                                                                           
+                                                                                
+    /*                                                                          
+     * If the size we required was not a vector size multiple then              
+     * run one last time and more time                                          
+     */                                                                         
+    if (lastRnd < sizeof(prngCV)) {                                             
+        rnd[0] = vm_noise(); rnd[1] = vm_noise(); 
+	rnd[2] = vm_noise(); rnd[3] = vm_noise(); 
+        rnd[4] = vm_noise(); rnd[5] = vm_noise(); 
+	rnd[6] = vm_noise(); rnd[7] = vm_noise(); 
+        vm_kmc(KMC_PRNG, prngCV, &rnd, sizeof(rnd), &rnd);                        
+        memcpy(out, &rnd, lastRnd);                                            
+        prngCount += sizeof(prngCV);                                           
+    }                                                                          
+}                                                                              
+#endif
+
 /* Read random bytes:
 
    - Return 0 on success
@@ -515,6 +622,9 @@ pyurandom(void *buffer, Py_ssize_t size, int blocking, int raise)
 
 #ifdef MS_WINDOWS
     return win32_urandom((unsigned char *)buffer, size, raise);
+#elif defined(__VM__)
+    kmc_prng(buffer, size);
+    return 0;
 #else
 
 #if defined(PY_GETRANDOM) || defined(PY_GETENTROPY)

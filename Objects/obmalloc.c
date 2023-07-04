@@ -1967,6 +1967,7 @@ _PyObject_Malloc(void *ctx, size_t nbytes)
     if (ptr != NULL) {
         raw_allocated_blocks++;
     }
+    
     return ptr;
 }
 

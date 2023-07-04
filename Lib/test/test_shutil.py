@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 # Copyright (C) 2003 Python Software Foundation
 
 import unittest
@@ -1510,6 +1516,11 @@ class TestArchives(BaseTest, unittest.TestCase):
         # testing make_archive with owner and group, with various combinations
         # this works even if there's not gid/uid support
         if UID_GID_SUPPORT:
+            # On z/OS, uid/gid 0 and user root is not guaranteed to exist
+            if sys.platform == 'zos' or sys.platform == 'zvm':
+                group = grp.getgrgid(os.getgid()).gr_name
+                owner = pwd.getpwuid(os.getuid()).pw_name
+            else:
             group = grp.getgrgid(0)[0]
             owner = pwd.getpwuid(0)[0]
         else:
@@ -1535,6 +1546,7 @@ class TestArchives(BaseTest, unittest.TestCase):
 
     @support.requires_zlib()
     @unittest.skipUnless(UID_GID_SUPPORT, "Requires grp and pwd support")
+    @unittest.skipUnless(sys.platform != "zos" and sys.platform != "zvm", "z/OS root user is not guaranteed exist or be uid/gid 0")
     def test_tarfile_root_owner(self):
         root_dir, base_dir = self._create_files()
         base_name = os.path.join(self.mkdtemp(), 'archive')

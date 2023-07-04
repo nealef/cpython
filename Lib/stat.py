@@ -1,9 +1,17 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """Constants/functions for interpreting results of os.stat() and os.lstat().
 
 Suggested usage: from stat import *
 """
 
 # Indices for stat struct members in the tuple returned by os.stat()
+
+import sys
 
 ST_MODE  = 0
 ST_INO   = 1
@@ -28,11 +36,24 @@ def S_IFMT(mode):
     """Return the portion of the file's mode that describes the
     file type.
     """
+    if sys.platform == 'zos' or sys.platform == 'zvm':
+        return mode & 0xFF000000
+    else:
     return mode & 0o170000
 
 # Constants used as S_IFMT() for various file types
 # (not all are implemented on all systems)
 
+
+if sys.platform == 'zos' or sys.platform == 'zvm':
+    S_IFDIR = 0x01000000
+    S_IFCHR = 0x02000000
+    S_IFBLK = 0x06000000
+    S_IFREG = 0x03000000
+    S_IFIFO = 0x04000000
+    S_IFLNK = 0x05000000
+    S_IFSOCK= 0x07000000
+else:
 S_IFDIR  = 0o040000  # directory
 S_IFCHR  = 0o020000  # character device
 S_IFBLK  = 0o060000  # block device
@@ -156,7 +177,17 @@ _filemode_table = (
 def filemode(mode):
     """Convert a file's mode to a string of the form '-rwxrwxrwx'."""
     perm = []
-    for table in _filemode_table:
+    start_index = 0
+
+    if sys.platform == 'zos' or sys.platform == 'zvm':
+        start_index = 1
+        for bit, char in _filemode_table[0]:
+            if S_IFMT(mode) == bit:
+                perm.append(char)
+                break
+
+    for i in range(start_index, len(_filemode_table)):
+        table = _filemode_table[i]
         for bit, char in table:
             if mode & bit == bit:
                 perm.append(char)

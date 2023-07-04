@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 # Test the support for SSL and sockets
 
 import sys
@@ -2375,7 +2381,6 @@ class SimpleBackgroundTests(unittest.TestCase):
             self.assertRaises(ssl.SSLEOFError, sslobj.read)
 
 
-@support.requires_resource('network')
 class NetworkedTests(unittest.TestCase):
 
     def test_timeout_connect_ex(self):
@@ -2817,6 +2822,9 @@ class AsyncoreEchoServer(threading.Thread):
             self.flag.set()
         while self.active:
             try:
+                if sys.platform == 'zos':
+                    asyncore.loop(1, use_poll=True)
+                else:
                 asyncore.loop(1)
             except:
                 pass
@@ -4553,13 +4561,17 @@ class TestPostHandshakeAuth(unittest.TestCase):
                 ):
                     # receive CertificateRequest
                     data = s.recv(1024)
+                    if not data:
+                        raise ssl.SSLError(1, "EOF occurred")
                     self.assertEqual(data, b'OK\n')
 
                     # send empty Certificate + Finish
                     s.write(b'HASCERT')
 
                     # receive alert
-                    s.recv(1024)
+                    data = s.recv(1024)
+                    if not data:
+                        raise ssl.SSLError(1, "EOF occurred")
 
     def test_pha_optional(self):
         if support.verbose:
@@ -4904,7 +4916,7 @@ class TestSSLDebug(unittest.TestCase):
                 s.connect((HOST, server.port))
 
 
-def setUpModule():
+def test_main(verbose=False):
     if support.verbose:
         plats = {
             'Mac': platform.mac_ver,
@@ -4935,9 +4947,20 @@ def setUpModule():
         if not os.path.exists(filename):
             raise support.TestFailed("Can't read certificate file %r" % filename)
 
-    thread_info = threading_helper.threading_setup()
-    unittest.addModuleCleanup(threading_helper.threading_cleanup, *thread_info)
+    tests = [
+        ContextTests, BasicSocketTests, SSLErrorTests, MemoryBIOTests,
+        SSLObjectTests, SimpleBackgroundTests, ThreadedTests,
+        TestPostHandshakeAuth, TestSSLDebug
+    ]
 
+    if support.is_resource_enabled('network'):
+        tests.append(NetworkedTests)
+
+    thread_info = threading_helper.threading_setup()
+    try:
+        support.run_unittest(*tests)
+    finally:
+        threading_helper.threading_cleanup(*thread_info)
 
 if __name__ == "__main__":
-    unittest.main()
+    test_main()

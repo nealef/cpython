@@ -710,7 +710,8 @@ class DisWithFileTests(DisTests):
 if dis.code_info.__doc__ is None:
     code_info_consts = "0: None"
 else:
-    code_info_consts = "0: 'Formatted details of methods, functions, or code.'"
+    code_info_consts = ("0: 'Formatted details of methods, functions, or code.'"
+                        "1: None""")
 
 code_info_code_info = f"""\
 Name:              code_info
@@ -834,6 +835,7 @@ Flags:             NOFREE
 Constants:
    0: 0
    1: 1
+   2: None
 Names:
    0: x"""
 

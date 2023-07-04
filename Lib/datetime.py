@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """Concrete date/time and related types.
 
 See http://www.iana.org/time-zones/repository/tz-link.html for
@@ -1662,7 +1668,7 @@ class datetime(date):
             # thus we can't perform fold detection for values of time less
             # than the max time fold. See comments in _datetimemodule's
             # version of this method for more details.
-            if t < max_fold_seconds and sys.platform.startswith("win"):
+            if t < max_fold_seconds and (sys.platform.startswith("win") or sys.platform == 'zos'  or sys.platform == 'zvm'):
                 return result
 
             y, m, d, hh, mm, ss = converter(t - max_fold_seconds)[:6]

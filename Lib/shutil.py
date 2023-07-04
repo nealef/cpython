@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """Utility functions for copying and archiving files and directory trees.
 
 XXX The functions here don't copy the resource fork or other metadata on Mac.
@@ -191,11 +197,35 @@ def copyfileobj(fsrc, fdst, length=0):
         length = COPY_BUFSIZE
     fsrc_read = fsrc.read
     fdst_write = fdst.write
+    
+    first_buf = fsrc_read(length)
+    if not first_buf:
+        return
+    fdst_write(first_buf)
+
+    prev_buf = None
     while True:
         buf = fsrc_read(length)
         if not buf:
             break
         fdst_write(buf)
+        prev_buf = buf
+
+    if sys.platform == 'zos' and (first_buf or prev_buf) and hasattr(fdst, 'name'):
+        fdst.flush()
+        ccsid = os.get_tagging(first_buf[:64])
+
+        if ccsid > 0:
+            os.set_tagging(fdst.name, ccsid)
+        elif prev_buf:
+            ccsid = os.get_tagging(prev_buf[-64:])
+            os.set_tagging(fdst.name, ccsid)
+        elif len(first_buf) > 64:
+            ccsid = os.get_tagging(first_buf[-64:])
+            os.set_tagging(fdst.name, ccsid)
+
+        if hasattr(fsrc, 'zos_filemode'):
+            os.chmod(fdst.name, fsrc.zos_filemode)
 
 def _samefile(src, dst):
     # Macintosh, Unix.
@@ -275,6 +305,8 @@ def copyfile(src, dst, *, follow_symlinks=True):
                         return dst
 
                     copyfileobj(fsrc, fdst)
+                    if sys.platform == "zos":
+                        os.copyccsid(fdst, fsrc)
 
             # Issue 43219, raise a less confusing exception
             except IsADirectoryError as e:
@@ -1432,7 +1464,19 @@ def get_terminal_size(fallback=(80, 24)):
 # Additionally check that `file` is not a directory, as on Windows
 # directories pass the os.access check.
 def _access_check(fn, mode):
-    return (os.path.exists(fn) and os.access(fn, mode)
+    has_access = False
+
+    # z/OS throws an error if it checks both F_OK and others at the
+    # same time. So check F_OK first (if it's set), then the others
+    if (sys.platform == 'zos'  or sys.platform == 'zvm' and mode & os.F_OK):
+        newmode = mode & ~os.F_OK
+        has_access = os.access(fn, os.F_OK)
+        if has_access and newmode != 0:
+            has_access = has_access and os.access(fn, newmode)
+    else:
+        has_access = os.access(fn, mode)
+
+    return (os.path.exists(fn) and has_access
             and not os.path.isdir(fn))
 
 

@@ -709,5 +709,9 @@ class TestSupport(unittest.TestCase):
     # SuppressCrashReport
 
 
+def test_main():
+    tests = [TestSupport]
+    support.run_unittest(*tests)
+
 if __name__ == '__main__':
-    unittest.main()
+    test_main()

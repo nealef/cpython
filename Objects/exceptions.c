@@ -2191,6 +2191,16 @@ UnicodeDecodeError_str(PyObject *self)
     if (encoding_str == NULL)
         goto done;
 
+{
+#include <ctest.h>
+printf("%s:d - bad encoding\n",__func__,__LINE__);
+for(int i = 0; i < PyBytes_GET_SIZE(uself->object); i++) {
+int byte = (int)(PyBytes_AS_STRING(((PyUnicodeErrorObject *)self)->object)[uself->start+i]&0xff);
+printf("%c",byte);
+}
+printf("\n");
+ctrace("bad encoding");
+}
     if (uself->start < PyBytes_GET_SIZE(uself->object) && uself->end == uself->start+1) {
         int byte = (int)(PyBytes_AS_STRING(((PyUnicodeErrorObject *)self)->object)[uself->start]&0xff);
         result = PyUnicode_FromFormat(

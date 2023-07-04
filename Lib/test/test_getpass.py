@@ -1,5 +1,12 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 import getpass
 import os
+import sys
 import unittest
 from io import BytesIO, StringIO, TextIOWrapper
 from unittest import mock
@@ -106,6 +113,9 @@ class UnixGetpassTest(unittest.TestCase):
             open.assert_called_once_with('/dev/tty',
                                          os.O_RDWR | os.O_NOCTTY)
             fileio.assert_called_once_with(open.return_value, 'w+')
+            if sys.platform == 'zos' or sys.platform == 'zvm':
+                textio.assert_called_once_with(fileio.return_value, encoding="cp1047")
+            else:
             textio.assert_called_once_with(fileio.return_value)
 
     def test_resets_termios(self):

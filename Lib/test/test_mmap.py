@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 from test.support import (requires, _2G, _4G, gc_collect, cpython_only)
 from test.support.import_helper import import_module
 from test.support.os_helper import TESTFN, unlink
@@ -850,10 +856,12 @@ class LargeMmapTests(unittest.TestCase):
                 self.assertEqual(m[start:end], tail)
 
     @unittest.skipUnless(sys.maxsize > _4G, "test cannot run on 32-bit systems")
+    @unittest.skipIf(sys.platform == "zos" or sys.platform == "zvm",  "zos doesn't support map_address above 31-bit")
     def test_around_2GB(self):
         self._test_around_boundary(_2G)
 
     @unittest.skipUnless(sys.maxsize > _4G, "test cannot run on 32-bit systems")
+    @unittest.skipIf(sys.platform == "zos" or sys.platform == "zvm", "zos doesn't support map_address above 31-bit")
     def test_around_4GB(self):
         self._test_around_boundary(_4G)
 

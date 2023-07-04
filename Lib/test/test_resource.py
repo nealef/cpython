@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 import contextlib
 import sys
 import unittest
@@ -31,8 +37,13 @@ class ResourceTest(unittest.TestCase):
             # we need to test that the get/setrlimit functions properly convert
             # the number to a C long long and that the conversion doesn't raise
             # an error.
+            if sys.platform != 'zos' and sys.platform != 'zvm':
             self.assertEqual(resource.RLIM_INFINITY, max)
             resource.setrlimit(resource.RLIMIT_FSIZE, (cur, max))
+            else:
+                # On z/OS, RLIM_INFINITY is considered greater than any other
+                # and not equal to max. 
+                resource.setrlimit(resource.RLIMIT_FSIZE, (cur, max))
 
     def test_fsize_enforced(self):
         try:
@@ -174,5 +185,8 @@ class ResourceTest(unittest.TestCase):
                          limits)
 
 
+def test_main(verbose=None):
+    support.run_unittest(ResourceTest)
+
 if __name__ == "__main__":
-    unittest.main()
+    test_main()

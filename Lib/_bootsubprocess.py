@@ -1,9 +1,16 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """
 Basic subprocess implementation for POSIX which only uses os functions. Only
 implement features required by setup.py to build C extension modules when
 subprocess is unavailable. setup.py is not used on Windows.
 """
 import os
+import sys
 
 
 # distutils.spawn used by distutils.command.build_ext
@@ -15,6 +22,9 @@ class Popen:
         self.returncode = None
 
     def wait(self):
+        if sys.platform == 'zos' or sys.platform == 'zvm':
+            return check_output(self._cmd)
+
         pid = os.fork()
         if pid == 0:
             # Child process
@@ -39,7 +49,7 @@ def _check_cmd(cmd):
     for first, last in (("a", "z"), ("A", "Z"), ("0", "9")):
         for ch in range(ord(first), ord(last) + 1):
             safe_chars.append(chr(ch))
-    safe_chars.append("./-")
+    safe_chars.append("./-=,_:")
     safe_chars = ''.join(safe_chars)
 
     if isinstance(cmd, (tuple, list)):
@@ -51,12 +61,15 @@ def _check_cmd(cmd):
 
     for arg in check_strs:
         if not isinstance(arg, str):
+            print(f'not a string')
             return False
         if not arg:
+            print(f'empty arg')
             # reject empty string
             return False
         for ch in arg:
             if ch not in safe_chars:
+                print(f'{ch} is not a safe character')
                 return False
 
     return True
@@ -80,6 +93,7 @@ def check_output(cmd, **kwargs):
         status = os.system(cmd)
         exitcode = os.waitstatus_to_exitcode(status)
         if exitcode:
+            os.system("cat check_output.tmp")
             raise ValueError(f"Command {cmd!r} returned non-zero "
                              f"exit status {exitcode!r}")
 

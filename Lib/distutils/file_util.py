@@ -1,9 +1,16 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """distutils.file_util
 
 Utility functions for operating on single files.
 """
 
 import os
+import sys
 from distutils.errors import DistutilsFileError
 from distutils import log
 
@@ -43,6 +50,7 @@ def _copy_file_contents(src, dst, buffer_size=16*1024):
             raise DistutilsFileError(
                   "could not create '%s': %s" % (dst, e.strerror))
 
+        prev_buf = None
         while True:
             try:
                 buf = fsrc.read(buffer_size)
@@ -58,6 +66,14 @@ def _copy_file_contents(src, dst, buffer_size=16*1024):
             except OSError as e:
                 raise DistutilsFileError(
                       "could not write to '%s': %s" % (dst, e.strerror))
+
+            prev_buf = buf
+
+        if sys.platform == 'zos' or sys.platform == 'zvm' and prev_buf:
+            fdst.flush()
+
+            ccsid = os.get_tagging(prev_buf[-128:])
+            os.set_tagging(dst, ccsid)
     finally:
         if fdst:
             fdst.close()

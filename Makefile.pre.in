@@ -58,7 +58,7 @@ DTRACE_OBJS=    @DTRACE_OBJS@
 GNULD=		@GNULD@
 
 # Shell used by make (some versions default to the login shell, which is bad)
-SHELL=		/bin/sh
+SHELL=		bash
 
 # Use this to make a link between python$(VERSION) and python in $(BINDIR)
 LN=		@LN@
@@ -324,7 +324,7 @@ PEGEN_HEADERS= \
 		$(srcdir)/Parser/string_parser.h
 
 POBJS=		\
-		Parser/token.o \
+		Parser/token.o
 
 PARSER_OBJS=	$(POBJS) $(PEGEN_OBJS) Parser/myreadline.o Parser/tokenizer.o
 

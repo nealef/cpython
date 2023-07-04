@@ -454,7 +454,6 @@ class TestContext(unittest.TestCase):
         f()
 
     def test_3611(self):
-        import gc
         # A re-raised exception in a __del__ caused the __context__
         # to be cleared
         class C:
@@ -468,11 +467,9 @@ class TestContext(unittest.TestCase):
             x = C()
             try:
                 try:
-                    f.x
+                    x.x
                 except AttributeError:
-                    # make x.__del__ trigger
                     del x
-                    gc.collect()  # For PyPy or other GCs.
                     raise TypeError
             except Exception as e:
                 self.assertNotEqual(e.__context__, None)

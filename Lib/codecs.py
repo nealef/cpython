@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """ codecs -- Python Codec Registry, API and helpers.
 
 
@@ -9,6 +15,7 @@ Written by Marc-Andre Lemburg (mal@lemburg.com).
 
 import builtins
 import sys
+import os
 
 ### Registry and builtin stateless codec functions
 
@@ -868,6 +875,17 @@ class StreamRecoder:
 
 ### Shortcuts
 
+_codecs_encoding_mapping = {
+    'ascii': 819,
+    'cp1047': 1047,
+    'ibm1047': 1047, 
+    'cp037': 37,
+    '1047': 1047,
+    'utf8': 819,
+    'utf-8': 819,
+    'iso-8859-1': 819
+}
+
 def open(filename, mode='r', encoding=None, errors='strict', buffering=-1):
 
     """ Open an encoded file using the given mode and return
@@ -906,6 +924,10 @@ def open(filename, mode='r', encoding=None, errors='strict', buffering=-1):
     file = builtins.open(filename, mode, buffering)
     if encoding is None:
         return file
+    elif sys.platform == 'zos':
+        lower = encoding.lower()
+        if lower in _codecs_encoding_mapping:
+            os.set_tagging(filename, _codecs_encoding_mapping[lower])
 
     try:
         info = lookup(encoding)

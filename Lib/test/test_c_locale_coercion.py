@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 # Tests the attempted automatic coercion of the C locale to a UTF-8 locale
 
 import locale
@@ -37,7 +43,7 @@ if sys.platform.startswith("linux"):
         # TODO: Once https://bugs.python.org/issue30672 is addressed, we'll be
         #       able to check this case unconditionally
         EXPECTED_C_LOCALE_EQUIVALENTS.append("POSIX")
-elif sys.platform.startswith("aix"):
+elif sys.platform.startswith("aix") or sys.platform == 'zos' or sys.platform == 'zvm':
     # AIX uses iso8859-1 in the C locale, other *nix platforms use ASCII
     EXPECTED_C_LOCALE_STREAM_ENCODING = "iso8859-1"
     EXPECTED_C_LOCALE_FS_ENCODING = "iso8859-1"
@@ -427,9 +433,12 @@ class LocaleCoercionTests(_LocaleHandlingTestCase):
         self.assertEqual(cmd.stdout.rstrip(), loc)
 
 
-def tearDownModule():
+def test_main():
+    support.run_unittest(
+        LocaleConfigurationTests,
+        LocaleCoercionTests
+    )
     support.reap_children()
 
-
 if __name__ == "__main__":
-    unittest.main()
+    test_main()

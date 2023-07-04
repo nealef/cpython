@@ -562,8 +562,13 @@ PyDoc_STRVAR(signal_pthread_kill__doc__,
     {"pthread_kill", (PyCFunction)(void(*)(void))signal_pthread_kill, METH_FASTCALL, signal_pthread_kill__doc__},
 
 static PyObject *
+#ifdef __MVS__
+signal_pthread_kill_impl(PyObject *module, uint64_t thread_id,
+                         int signalnum);
+#else
 signal_pthread_kill_impl(PyObject *module, unsigned long thread_id,
                          int signalnum);
+#endif
 
 static PyObject *
 signal_pthread_kill(PyObject *module, PyObject *const *args, Py_ssize_t nargs)

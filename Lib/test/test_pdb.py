@@ -11,7 +11,7 @@ import subprocess
 import textwrap
 import linecache
 
-from contextlib import ExitStack, redirect_stdout
+from contextlib import ExitStack
 from io import StringIO
 from test.support import os_helper
 # This little helper class is essential for testing pdb under doctest.
@@ -362,7 +362,7 @@ def test_pdb_breakpoints_preserved_across_interactive_sessions():
     1   breakpoint   keep yes   at ...test_pdb.py:...
     2   breakpoint   keep yes   at ...test_pdb.py:...
     (Pdb) break pdb.find_function
-    Breakpoint 3 at ...pdb.py:94
+    Breakpoint 3 at ...pdb.py:...
     (Pdb) break
     Num Type         Disp Enb   Where
     1   breakpoint   keep yes   at ...test_pdb.py:...
@@ -1888,7 +1888,7 @@ def bœr():
         os_helper.rmtree(module_name)
         init_file = module_name + '/__init__.py'
         os.mkdir(module_name)
-        with open(init_file, 'w'):
+        with open(init_file, 'w') as f:
             pass
         self.addCleanup(os_helper.rmtree, module_name)
         stdout, stderr = self._run_pdb(['-m', module_name], "")
@@ -1901,7 +1901,7 @@ def bœr():
         os_helper.rmtree(pkg_name)
         modpath = pkg_name + '/' + module_name
         os.makedirs(modpath)
-        with open(modpath + '/__init__.py', 'w'):
+        with open(modpath + '/__init__.py', 'w') as f:
             pass
         self.addCleanup(os_helper.rmtree, pkg_name)
         stdout, stderr = self._run_pdb(['-m', modpath.replace('/', '.')], "")
@@ -2161,6 +2161,7 @@ class ChecklineTests(unittest.TestCase):
         self.assertEqual(db.checkline(os_helper.TESTFN, 1), 1)
 
     def test_checkline_is_not_executable(self):
+        with open(os_helper.TESTFN, "w") as f:
         # Test for comments, docstrings and empty lines
         s = textwrap.dedent("""
             # Comment
@@ -2168,11 +2169,9 @@ class ChecklineTests(unittest.TestCase):
             ''' docstring '''
 
         """)
-        with open(os_helper.TESTFN, "w") as f:
             f.write(s)
-        num_lines = len(s.splitlines()) + 2  # Test for EOF
-        with redirect_stdout(StringIO()):
             db = pdb.Pdb()
+        num_lines = len(s.splitlines()) + 2  # Test for EOF
             for lineno in range(num_lines):
                 self.assertFalse(db.checkline(os_helper.TESTFN, lineno))
 

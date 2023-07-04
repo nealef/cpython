@@ -57,6 +57,7 @@ import importlib
 import linecache
 from contextlib import contextmanager
 from itertools import islice, repeat
+import test.support
 from test.support import import_helper
 from test.support import os_helper
 from test.support import patch_list
@@ -1208,6 +1209,13 @@ class TestRegressions(unittest.TestCase):
         # See gh-101517
         Bdb().format_stack_entry((sys._getframe(), None))
 
+def test_main():
+    test.support.run_unittest(
+        StateTestCase,
+        RunTestCase,
+        BreakpointTestCase,
+        IssuesTestCase,
+    )
 
 if __name__ == "__main__":
-    unittest.main()
+    test_main()

@@ -1,3 +1,9 @@
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 import unittest
 from test import support
 from test.support import os_helper
@@ -199,7 +205,7 @@ class SocketUDPLITETest(SocketUDPTest):
         self.serv = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDPLITE)
         self.port = socket_helper.bind_port(self.serv)
 
-class ThreadSafeCleanupTestCase:
+class ThreadSafeCleanupTestCase(unittest.TestCase):
     """Subclass of unittest.TestCase with thread-safe cleanup methods.
 
     This subclass protects the addCleanup() and doCleanups() methods
@@ -326,7 +332,9 @@ class ThreadableTest:
     def __init__(self):
         # Swap the true setup function
         self.__setUp = self.setUp
+        self.__tearDown = self.tearDown
         self.setUp = self._setUp
+        self.tearDown = self._tearDown
 
     def serverExplicitReady(self):
         """This method allows the server to explicitly indicate that
@@ -338,18 +346,12 @@ class ThreadableTest:
     def _setUp(self):
         self.wait_threads = threading_helper.wait_threads_exit()
         self.wait_threads.__enter__()
-        self.addCleanup(self.wait_threads.__exit__, None, None, None)
 
         self.server_ready = threading.Event()
         self.client_ready = threading.Event()
         self.done = threading.Event()
         self.queue = queue.Queue(1)
         self.server_crashed = False
-
-        def raise_queued_exception():
-            if self.queue.qsize():
-                raise self.queue.get()
-        self.addCleanup(raise_queued_exception)
 
         # Do some munging to start the client test.
         methodname = self.id()
@@ -367,7 +369,15 @@ class ThreadableTest:
         finally:
             self.server_ready.set()
         self.client_ready.wait()
-        self.addCleanup(self.done.wait)
+
+    def _tearDown(self):
+        self.__tearDown()
+        self.done.wait()
+        self.wait_threads.__exit__(None, None, None)
+
+        if self.queue.qsize():
+            exc = self.queue.get()
+            raise exc
 
     def clientRun(self, test_func):
         self.server_ready.wait()
@@ -866,7 +876,6 @@ class GeneralModuleTests(unittest.TestCase):
             p = proxy(s)
             self.assertEqual(p.fileno(), s.fileno())
         s = None
-        support.gc_collect()  # For PyPy or other GCs.
         try:
             p.fileno()
         except ReferenceError:
@@ -1229,7 +1238,9 @@ class GeneralModuleTests(unittest.TestCase):
         self.assertEqual(b'\x01\x02\x03\x04', f('1.2.3.4'))
         self.assertEqual(b'\xff\xff\xff\xff', f('255.255.255.255'))
         # bpo-29972: inet_pton() doesn't fail on AIX
-        if not AIX:
+        # z doesn't have inet_aton, and it's emulated using inet_addr. inet_addr
+        # it is valid to have a 3-part ip address, so this check is invalid on z
+        if not (AIX or sys.platform == 'zos' or sys.platform == 'zvm'):
             assertInvalid(f, '0.0.0.')
         assertInvalid(f, '300.0.0.0')
         assertInvalid(f, 'a.0.0.0')
@@ -1289,12 +1300,14 @@ class GeneralModuleTests(unittest.TestCase):
         assertInvalid('1:2:3:4:5:6:')
         assertInvalid('1:2:3:4:5:6:7:8:0')
         # bpo-29972: inet_pton() doesn't fail on AIX
-        if not AIX:
+        if not (AIX or sys.platform == 'zos' or sys.platform == 'zvm'):
             assertInvalid('1:2:3:4:5:6:7:8:')
 
         self.assertEqual(b'\x00' * 12 + b'\xfe\x2a\x17\x40',
             f('::254.42.23.64')
         )
+        # Bug in z, valid ipv6 addresses seem to be classified as not valid
+        if sys.platform != 'zos' or sys.platform == 'zvm':
         self.assertEqual(
             b'\x00\x42' + b'\x00' * 8 + b'\xa2\x9b\xfe\x2a\x17\x40',
             f('42::a29b:254.42.23.64')
@@ -1497,6 +1510,12 @@ class GeneralModuleTests(unittest.TestCase):
         self.assertRaises(TypeError, s.ioctl, socket.SIO_LOOPBACK_FAST_PATH, None)
 
     def testGetaddrinfo(self):
+        try:
+            if socket.getservbyname('http', 'tcp'):
+                pass
+        except OSError:
+            raise unittest.SkipTest('http service must be defined')
+
         try:
             socket.getaddrinfo('localhost', 80)
         except socket.gaierror as err:
@@ -1754,14 +1773,21 @@ class GeneralModuleTests(unittest.TestCase):
     def test_getaddrinfo_ipv6_scopeid_symbolic(self):
         # Just pick up any network interface (Linux, Mac OS X)
         (ifindex, test_interface) = socket.if_nameindex()[0]
+        # On z, scope ids are only available on link-local addresses
+        if sys.platform == 'zos' or sys.platform == 'zvm':
+            address = 'fe80::1de:c0:face:8D%' + test_interface
+            expected = ('fe80::1de:c0:face:8d', 1234, 0, ifindex)
+        else:
+            address = 'ff02::1de:c0:face:8D%' + test_interface
+            expected = ('ff02::1de:c0:face:8d', 1234, 0, ifindex)
         ((*_, sockaddr),) = socket.getaddrinfo(
-            'ff02::1de:c0:face:8D%' + test_interface,
+            address,
             1234, socket.AF_INET6,
             socket.SOCK_DGRAM,
             socket.IPPROTO_UDP
         )
         # Note missing interface name part in IPv6 address
-        self.assertEqual(sockaddr, ('ff02::1de:c0:face:8d', 1234, 0, ifindex))
+        self.assertEqual(sockaddr, expected)
 
     @unittest.skipUnless(socket_helper.IPV6_ENABLED, 'IPv6 required for this test.')
     @unittest.skipUnless(
@@ -1787,9 +1813,15 @@ class GeneralModuleTests(unittest.TestCase):
     def test_getnameinfo_ipv6_scopeid_symbolic(self):
         # Just pick up any network interface.
         (ifindex, test_interface) = socket.if_nameindex()[0]
+        # On z, scope id's are only applicable on link-local addresses 
+        if sys.platform == 'zos' or sys.platform == 'zvm': 
+            sockaddr = ('fe80::1de:c0:face:8D', 1234, 0, ifindex)  # Note capital letter `D`.
+            expected = 'fe80::1de:c0:face:8d%' + test_interface, '1234'
+        else:
         sockaddr = ('ff02::1de:c0:face:8D', 1234, 0, ifindex)  # Note capital letter `D`.
+            expected = 'ff02::1de:c0:face:8d%' + test_interface, '1234'
         nameinfo = socket.getnameinfo(sockaddr, socket.NI_NUMERICHOST | socket.NI_NUMERICSERV)
-        self.assertEqual(nameinfo, ('ff02::1de:c0:face:8d%' + test_interface, '1234'))
+        self.assertEqual(nameinfo, expected)
 
     @unittest.skipUnless(socket_helper.IPV6_ENABLED, 'IPv6 required for this test.')
     @unittest.skipUnless( sys.platform == 'win32',
@@ -3911,6 +3943,7 @@ class RFC3542AncillaryTest(SendrecvmsgServerTimeoutBase):
     @requireAttrs(socket.socket, "sendmsg")
     @requireAttrs(socket, "CMSG_SPACE", "IPV6_RECVHOPLIMIT", "IPV6_HOPLIMIT",
                   "IPV6_RECVTCLASS", "IPV6_TCLASS")
+    @unittest.skipIf(sys.platform == 'zos' or sys.platform == 'zvm', 'Cannot set hop limit without permissions')
     def testSetTrafficClassAndHopLimit(self):
         # Test setting traffic class and hop limit on outgoing packet,
         # and receiving them at the other end.
@@ -3931,6 +3964,7 @@ class RFC3542AncillaryTest(SendrecvmsgServerTimeoutBase):
     @requireAttrs(socket.socket, "sendmsg")
     @requireAttrs(socket, "CMSG_SPACE", "IPV6_RECVHOPLIMIT", "IPV6_HOPLIMIT",
                   "IPV6_RECVTCLASS", "IPV6_TCLASS")
+    @unittest.skipIf(sys.platform == 'zos' or sys.platform == 'zvm', 'Cannot set hop limit without permissions')
     def testOddCmsgSize(self):
         # Try to send ancillary data with first item one byte too
         # long.  Fall back to sending with correct size if this fails,
@@ -4428,7 +4462,7 @@ class RecvmsgIntoSCMRightsStreamTest(RecvmsgIntoMixin, SCMRightsTest,
 # threads alive during the test so that the OS cannot deliver the
 # signal to the wrong one.
 
-class InterruptedTimeoutBase:
+class InterruptedTimeoutBase(unittest.TestCase):
     # Base class for interrupted send/receive tests.  Installs an
     # empty handler for SIGALRM and removes it on teardown, along with
     # any scheduled alarms.
@@ -6206,7 +6240,6 @@ class SendfileUsingSendTest(ThreadedTCPSocketTest):
     def testWithTimeoutTriggeredSend(self):
         conn = self.accept_conn()
         conn.recv(88192)
-        time.sleep(1)
 
     # errors
 
@@ -6526,6 +6559,13 @@ class CreateServerTest(unittest.TestCase):
 class CreateServerFunctionalTest(unittest.TestCase):
     timeout = support.LOOPBACK_TIMEOUT
 
+    def setUp(self):
+        self.thread = None
+
+    def tearDown(self):
+        if self.thread is not None:
+            self.thread.join(self.timeout)
+
     def echo_server(self, sock):
         def run(sock):
             with sock:
@@ -6539,9 +6579,8 @@ class CreateServerFunctionalTest(unittest.TestCase):
 
         event = threading.Event()
         sock.settimeout(self.timeout)
-        thread = threading.Thread(target=run, args=(sock, ))
-        thread.start()
-        self.addCleanup(thread.join, self.timeout)
+        self.thread = threading.Thread(target=run, args=(sock, ))
+        self.thread.start()
         event.set()
 
     def echo_client(self, addr, family):
@@ -6629,10 +6668,84 @@ class SendRecvFdsTests(unittest.TestCase):
             self.assertEqual(data,  str(index).encode())
 
 
-def setUpModule():
+def test_main():
+    tests = [GeneralModuleTests, BasicTCPTest, TCPCloserTest, TCPTimeoutTest,
+             TestExceptions, BufferIOTest, BasicTCPTest2, BasicUDPTest,
+             UDPTimeoutTest, CreateServerTest, CreateServerFunctionalTest,
+             SendRecvFdsTests]
+
+    tests.extend([
+        NonBlockingTCPTests,
+        FileObjectClassTestCase,
+        UnbufferedFileObjectClassTestCase,
+        LineBufferedFileObjectClassTestCase,
+        SmallBufferedFileObjectClassTestCase,
+        UnicodeReadFileObjectClassTestCase,
+        UnicodeWriteFileObjectClassTestCase,
+        UnicodeReadWriteFileObjectClassTestCase,
+        NetworkConnectionNoServer,
+        NetworkConnectionAttributesTest,
+        NetworkConnectionBehaviourTest,
+        ContextManagersTest,
+        InheritanceTest,
+        NonblockConstantTest
+    ])
+    tests.append(BasicSocketPairTest)
+    tests.append(TestUnixDomain)
+    tests.append(TestLinuxAbstractNamespace)
+    tests.extend([TIPCTest, TIPCThreadableTest])
+    tests.extend([BasicCANTest, CANTest])
+    tests.extend([BasicRDSTest, RDSTest])
+    tests.append(LinuxKernelCryptoAPI)
+    tests.append(BasicQIPCRTRTest)
+    tests.extend([
+        BasicVSOCKTest,
+        ThreadedVSOCKSocketStreamTest,
+    ])
+    tests.append(BasicBluetoothTest)
+    tests.extend([
+        CmsgMacroTests,
+        SendmsgUDPTest,
+        RecvmsgUDPTest,
+        RecvmsgIntoUDPTest,
+        SendmsgUDP6Test,
+        RecvmsgUDP6Test,
+        RecvmsgRFC3542AncillaryUDP6Test,
+        RecvmsgIntoRFC3542AncillaryUDP6Test,
+        RecvmsgIntoUDP6Test,
+        SendmsgUDPLITETest,
+        RecvmsgUDPLITETest,
+        RecvmsgIntoUDPLITETest,
+        SendmsgUDPLITE6Test,
+        RecvmsgUDPLITE6Test,
+        RecvmsgRFC3542AncillaryUDPLITE6Test,
+        RecvmsgIntoRFC3542AncillaryUDPLITE6Test,
+        RecvmsgIntoUDPLITE6Test,
+        SendmsgTCPTest,
+        RecvmsgTCPTest,
+        RecvmsgIntoTCPTest,
+        SendmsgSCTPStreamTest,
+        RecvmsgSCTPStreamTest,
+        RecvmsgIntoSCTPStreamTest,
+        SendmsgUnixStreamTest,
+        RecvmsgUnixStreamTest,
+        RecvmsgIntoUnixStreamTest,
+        RecvmsgSCMRightsStreamTest,
+        RecvmsgIntoSCMRightsStreamTest,
+        # These are slow when setitimer() is not available
+        InterruptedRecvTimeoutTest,
+        InterruptedSendTimeoutTest,
+        TestSocketSharing,
+        SendfileUsingSendTest,
+        SendfileUsingSendfileTest,
+    ])
+    tests.append(TestMSWindowsTCPFlags)
+    tests.append(TestMacOSTCPFlags)
+
     thread_info = threading_helper.threading_setup()
-    unittest.addModuleCleanup(threading_helper.threading_cleanup, *thread_info)
+    support.run_unittest(*tests)
+    threading_helper.threading_cleanup(*thread_info)
 
 
 if __name__ == "__main__":
-    unittest.main()
+    test_main()

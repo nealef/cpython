@@ -134,6 +134,7 @@ _PyImport_LoadDynamicModuleWithSpec(PyObject *spec, FILE *fp)
     pathbytes = PyUnicode_EncodeFSDefault(path);
     if (pathbytes == NULL)
         goto error;
+
     exportfunc = _PyImport_FindSharedFuncptr(hook_prefix, name_buf,
                                              PyBytes_AS_STRING(pathbytes),
                                              fp);

@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+
+#Licensed Materials - Property of IBM
+#IBM Open Enterprise SDK for Python 3.10
+#5655-PYT
+#Copyright IBM Corp. 2021.
+#US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
 """Generate Python documentation in HTML or text for interactive use.
 
 At the Python interactive prompt, calling help(thing) on a Python object
@@ -1584,7 +1591,7 @@ def getpager():
     (fd, filename) = tempfile.mkstemp()
     os.close(fd)
     try:
-        if hasattr(os, 'system') and os.system('more "%s"' % filename) == 0:
+        if hasattr(os, 'system') and os.system('more "%s" &>/dev/null' % filename) == 0:
             return lambda text: pipepager(text, 'more')
         else:
             return ttypager
