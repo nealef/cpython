@@ -9,6 +9,16 @@
 extern ssize_t __write_a(int, const void *, size_t);
 extern ssize_t __read_a(int, void *, size_t);
 extern int __close_a(int);
+extern int __getchar_a(void);
+extern int __getc_a(FILE *);
+extern int __fgetc_a(FILE *);
+extern int __putchar_a(int);
+extern int __putc_a(int, FILE *);
+#pragma map(__getchar_a, "GTCHOVRA")
+#pragma map(__getc_a, "GETCOVRA")
+#pragma map(__fgetc_a, "FGTCOVRA")
+#pragma map(__putchar_a, "PTCHOVRA")
+#pragma map(__putc_a, "PUTCOVRA")
 #pragma map(__write_a, "WRITOVRA")
 #pragma map(__read_a, "READOVRA")
 #pragma map(__close_a, "CLOSOVRA")
@@ -42,9 +52,59 @@ close_override(int fd)
         return close(fd);
 }
 
+static __inline__ int
+getchar_override()
+{
+    if (__getchar_a != NULL) {
+        return __getchar_a();
+    } else
+        return getchar();
+}
+
+static __inline__ int
+getc_override(FILE *s)
+{
+    if (__getc_a != NULL) {
+        return __getc_a(s);
+    } else
+        return getc(s);
+}
+
+static __inline__ int
+fgetc_override(FILE *s)
+{
+    if (__fgetc_a != NULL) {
+        return __fgetc_a(s);
+    } else
+        return fgetc(s);
+}
+
+static __inline__ int
+putchar_override(int x)
+{
+    if (__putchar_a != NULL) {
+        return __putchar_a(x);
+    } else
+        return putchar(x);
+}
+
+static __inline__ int
+putc_override(int x, FILE *s)
+{
+    if (__putc_a != NULL) {
+        return __putc_a(x, s);
+    } else
+        return putc(x, s);
+}
+
 #define write(a,b,c) write_override(a,b,c)
 #define read(a,b,c) read_override(a,b,c)
 #define close(a) close_override(a)
+#define getchar() getchar_override()
+#define getc(a) getc_override(a)
+#define fgetc(a) fgetc_override(a)
+#define putchar() putchar_override()
+#define putc(a) putc_override(a)
 
 #undef isalnum
 #undef isalpha
