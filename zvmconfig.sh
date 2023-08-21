@@ -1,7 +1,7 @@
 #!/rocket/conda/bin/bash
  
 ######################### VARIABLES ##########################################
-PREFIX="/opt/python3.10"
+PREFIX="/usr/local"
  
  
 OFLAGS="-O"
@@ -23,12 +23,12 @@ QXXFLAGS="-qlanglvl=extended -qxplink -qdll -qenum=int -qexportall \
 CXXFLAGS="-+ ${OFLAGS} ${QXXFLAGS} ${DFLAGS} ${INCFLAGS}"
  
 QLFLAGS="-qxplink -qdll"
-LDFLAGS="${OFLAGS} ${QLFLAGS} -L/usr/local/lib /usr/local/libncurses.x"
+LDFLAGS="${OFLAGS} ${QLFLAGS} -L/usr/local/lib /usr/local/lib/libncurses.x -lz"
 CPPFLAGS="${DFLAGS}"
 LDSHARED="xlc -Wl,dll -q32 -qxplink"
 BLDSHARED="xlc -Wl,dll -q32 -qxplink"
 LDCXXSHARED="xlc"
-SHLIBS="/usr/local/lib/override.x /usr/local/lib/ncurses.x"
+SHLIBS="/usr/local/lib/override.x /usr/local/lib/libncurses.x"
  
 X_INCLUDES='/usr/lpp/tcpip/X11R66/include'
 X_LIBRARIES='/usr/lpp/tcpip/X11R66/lib'
@@ -112,11 +112,14 @@ export SHELL=/rocket/conda/bin/bash
 ./configure --prefix=${PREFIX} CC="${CC}" CFLAGS="${CFLAGS}" CXX="${CXX}" \
 	            CXXFLAGS="${CXXFLAGS}" LDFLAGS="${LDFLAGS}" CPP="${CPP}" \
 		                CPPFLAGS="${CPPFLAGS}" LDSHARED="${LDSHARED}" \
-                        BLDSHARED="${BLDSHARED}" SHLIBS="${SHLIBS}" \
+                        BLDSHARED="${BLDSHARED}" SHLIBS="${SHLIBS}" SHELL="${SHELL}" \
                             --disable-test-modules \
 				            --x-libraries=${X_LIBRARIES} \
-                            --enable-shared
+                            --enable-shared --without-readline
  
 echo "#include <override.h>" >>pyconfig.h
+
+sed -i'' -e 's/ -ltermcap//' -e 's+-lreadline+/usr/local/lib/libreadline.x+' Makefile
+
 exit 0
 ##############################################################################
