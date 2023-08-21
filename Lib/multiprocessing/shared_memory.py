@@ -45,7 +45,7 @@ _O_CREX = os.O_CREAT | os.O_EXCL
 if _USE_SYSV:
     _SHM_SAFE_NAME_LENGTH = 20
 else:
-_SHM_SAFE_NAME_LENGTH = 14
+    _SHM_SAFE_NAME_LENGTH = 14
 
 # Shared memory block name prefix
 if _USE_POSIX:

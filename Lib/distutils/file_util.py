@@ -11,6 +11,8 @@ Utility functions for operating on single files.
 
 import os
 import sys
+if sys.platform == 'zos' or sys.platform == 'zvm':
+    import zos_util
 from distutils.errors import DistutilsFileError
 from distutils import log
 
@@ -72,8 +74,8 @@ def _copy_file_contents(src, dst, buffer_size=16*1024):
         if sys.platform == 'zos' or sys.platform == 'zvm' and prev_buf:
             fdst.flush()
 
-            ccsid = os.get_tagging(prev_buf[-128:])
-            os.set_tagging(dst, ccsid)
+            ccsid = zos_util.get_tagging(src)
+            zos_util.set_tagging(dst, ccsid)
     finally:
         if fdst:
             fdst.close()

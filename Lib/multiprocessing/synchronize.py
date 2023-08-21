@@ -95,7 +95,7 @@ class SemLock(object):
         if hasattr(_multiprocessing, 'flags') and 'USING_SYSV_SEMAPHORES' in _multiprocessing.flags:
             sem_destroy(name)
         else:
-        sem_unlink(name)
+            sem_unlink(name)
         unregister(name, "semaphore")
 
     def _make_methods(self):

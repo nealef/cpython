@@ -1588,7 +1588,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
             with open(filename, 'r') as f:
                 code = bytes(f.read(), 'utf-8')
         else:
-        with io.open_code(filename) as fp:
+            with io.open_code(filename) as fp:
                 code = fp.read()
 
             statement = "exec(compile(%r, %r, 'exec'))" % \

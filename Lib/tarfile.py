@@ -298,7 +298,7 @@ def copyfileobj(src, dst, length=None, exception=OSError, bufsize=None, tag=True
 
     buf = None
     has_been_tagged = False
-    if sys.platform == 'zos' and hasattr(dst, 'name') and tag:
+    if sys.platform == 'zos' or sys.platform == 'zvm' and hasattr(dst, 'name') and tag:
         read_length = min(bufsize, length)
 
         buf = src.read(read_length)
@@ -330,7 +330,7 @@ def copyfileobj(src, dst, length=None, exception=OSError, bufsize=None, tag=True
             raise exception("unexpected end of data")
         dst.write(buf)
     
-    if sys.platform == 'zos' and hasattr(dst, 'name') and buf != None and tag and not has_been_tagged:
+    if sys.platform == 'zos' or sys.platform == 'zvm' and hasattr(dst, 'name') and buf != None and tag and not has_been_tagged:
         # If it's not flushed, the characters might get converted
         dst.flush()
 
@@ -947,7 +947,7 @@ class TarInfo(object):
         _link_target = None,
         )
     # Extra attributes for z/OS
-    if sys.platform == 'zos':
+    if sys.platform == 'zos' or sys.platform == 'zvm':
         __slots__['acls'] = 'Extended access control list.'
         __slots__['taginfo'] = 'File encoding tag infomation.'
         __slots__['useraudit'] = 'User-requested audit attributes.'
@@ -980,7 +980,7 @@ class TarInfo(object):
         self.pax_headers = {}   # pax header information
 
         # Extra attributes for z/OS
-        if sys.platform == 'zos':
+        if sys.platform == 'zos' or sys.platform == 'zvm':
             self.acls = "" #Extended access constrol list.
             self.taginfo = "" #File tag info.
             self.useraudit = "" #User requested audit
@@ -1060,7 +1060,7 @@ class TarInfo(object):
             "devminor": self.devminor
         }
 
-        if sys.platform == 'zos':
+        if sys.platform == 'zos' or sys.platform == 'zvm':
             info["acls"] = self.acls
             info["taginfo"] = self.taginfo
             info["useraudit"] = self.useraudit
@@ -1175,7 +1175,7 @@ class TarInfo(object):
                 pax_headers[name] = str(val)
 
         #Add ZOS extended attributes to PAX header.
-        if sys.platform == 'zos':
+        if sys.platform == 'zos' or sys.platform == 'zvm':
             #Redo mtime with no decimal place. This is for compatibility
             #with the z/OS pax specification.
             if "mtime" in pax_headers.keys():
@@ -1434,7 +1434,7 @@ class TarInfo(object):
         #Use both file type and specific filepath to distinguish OS390 special
         #header from GNU sparse type.
         if self.type in (OS390HEADERTYPE) and self.name.find(OS390_PATH_PREFIX) == 0 \
-            and sys.platform == 'zos':
+            and sys.platform == 'zos' or sys.platform == 'zvm':
             return self._proc_os390_header(tarfile)
         elif self.type in (GNUTYPE_LONGNAME, GNUTYPE_LONGLINK):
             return self._proc_gnulong(tarfile)
@@ -1710,7 +1710,7 @@ class TarInfo(object):
                 if keyword == "path":
                     value = value.rstrip("/")
                 setattr(self, keyword, value)
-            elif sys.platform == "zos" and keyword in ZOS_PAX_FIELDS:
+            elif sys.platform == "zos" or sys.platform == 'zvm' and keyword in ZOS_PAX_FIELDS:
                 #Assigning z/OS PAX headers to TarInfo members.
                 setattr(self, keyword[4:], value)
 
@@ -2231,7 +2231,7 @@ class TarFile(object):
         else:
             return None
 
-        if sys.platform == 'zos':
+        if sys.platform == 'zos' or sys.platform == 'zvm':
             #Getting encoding tag information from file.
             try:
                 cssid, set_txtflag = os.get_tagging_f(name)
@@ -2257,7 +2257,7 @@ class TarFile(object):
             tarinfo.size = statres.st_size
         else:
             tarinfo.size = 0
-        if sys.platform == 'zos' sys.platform == 'zvm' :
+        if sys.platform == 'zos' or sys.platform == 'zvm' :
             # z/OS pax can't handle mtime with decimal components, and
             # for now mtime isn't tracked with below-second granularity.
             # We can fix this by rounding, but in case we get more
@@ -2268,9 +2268,9 @@ class TarFile(object):
             else:
                 tarinfo.mtime = statres.st_mtime
         else:
-        tarinfo.mtime = statres.st_mtime
-        tarinfo.type = type
-        tarinfo.linkname = linkname
+            tarinfo.mtime = statres.st_mtime
+            tarinfo.type = type
+            tarinfo.linkname = linkname
         if pwd:
             try:
                 tarinfo.uname = pwd.getpwuid(tarinfo.uid)[0]
@@ -2693,7 +2693,7 @@ class TarFile(object):
         with bltn_open(targetpath, "wb") as target:
             guess_tag = True
             ccsid = 0
-            if sys.platform == 'zos':
+            if sys.platform == 'zos' or sys.platform == 'zvm':
                 if tarinfo.taginfo:
                     components = tarinfo.taginfo.split()
                     # Some z/OS archives created by legacy python versions

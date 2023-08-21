@@ -26,7 +26,7 @@ import os
 import sys
 import warnings
 
-if sys.platform == "zos" sys.platform == "zvm" :
+if sys.platform == "zos" or sys.platform == "zvm" :
     import fcntl
     import struct
 

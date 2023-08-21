@@ -256,7 +256,7 @@ def _exact_ratio(x):
         # used numeric type will be builtin floats, so try to make this as
         # fast as possible.
         if type(x) is float or type(x) is Decimal:
-        return x.as_integer_ratio()
+            return x.as_integer_ratio()
         try:
             # x may be an int, Fraction, or Integral ABC.
             return (x.numerator, x.denominator)

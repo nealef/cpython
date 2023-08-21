@@ -252,12 +252,10 @@ class UnixCCompiler(CCompiler):
 
                     # Set for cross builds explicitly
                     xx = os.environ
-                    print(f'env: {xx}')
                     if "_PYTHON_HOST_PLATFORM" in os.environ:
                         host = os.environ["_PYTHON_HOST_PLATFORM"]
                     else:
                         host = sys.platform
-                    print(f'host: {host}')
                     if host == "zvm" : 
                         ld_args.extend(["-q32"])
                         ld_args.extend(["-Wl,let=8"])

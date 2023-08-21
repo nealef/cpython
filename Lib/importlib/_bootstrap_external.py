@@ -156,7 +156,7 @@ def _path_is_mode_type(path, mode):
     if sys.platform == 'zos' or sys.platform == 'zvm':
         return (stat_info.st_mode & 0xff000000) == mode
     else: 
-    return (stat_info.st_mode & 0o170000) == mode
+        return (stat_info.st_mode & 0o170000) == mode
 
 
 def _path_isfile(path):
@@ -164,7 +164,7 @@ def _path_isfile(path):
     if sys.platform == 'zos' or sys.platform == 'zvm':
         return _path_is_mode_type(path, 0x03000000)
     else:
-    return _path_is_mode_type(path, 0o100000)
+        return _path_is_mode_type(path, 0o100000)
 
 
 def _path_isdir(path):
@@ -174,7 +174,7 @@ def _path_isdir(path):
     if sys.platform == 'zos' or sys.platform == 'zvm':
         return _path_is_mode_type(path, 0x01000000)
     else:
-    return _path_is_mode_type(path, 0o040000)
+        return _path_is_mode_type(path, 0o040000)
 
 
 if _MS_WINDOWS:

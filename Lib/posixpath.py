@@ -33,6 +33,8 @@ import sys
 import stat
 import genericpath
 from genericpath import *
+if sys.platform == 'zos' or sys.platform == 'zvm':
+    import zos_util
 
 __all__ = ["normcase","isabs","join","splitdrive","split","splitext",
            "basename","dirname","commonprefix","getsize","getmtime",
@@ -459,13 +461,13 @@ def _joinrealpath(path, rest, strict, seen):
                 # Return already resolved part + rest of the path unchanged.
                 return join(newpath, rest), False
         seen[newpath] = None # not resolved symlink
-        if sys.platform == 'zos':
+        if sys.platform == 'zos' or sys.platform == 'zvm':
             try:
-                path, ok = _joinrealpath(path, os.zos_realpath(newpath), strict, seen)
+                path, ok = _joinrealpath(path, zos_util.zos_realpath(newpath), strict, seen)
             except (FileNotFoundError, OSError):
                 path, ok = _joinrealpath(path, os.readlink(newpath), strict, seen)
         else:
-        path, ok = _joinrealpath(path, os.readlink(newpath), strict, seen)
+            path, ok = _joinrealpath(path, os.readlink(newpath), strict, seen)
         if not ok:
             return join(path, rest), False
         seen[newpath] = path # resolved symlink

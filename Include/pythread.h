@@ -21,9 +21,14 @@ typedef enum PyLockStatus {
 #endif
 
 PyAPI_FUNC(void) PyThread_init_thread(void);
+#ifdef __MVS__
+PyAPI_FUNC(uint64_t) PyThread_start_new_thread(void (*)(void *), void *);
+PyAPI_FUNC(uint64_t) PyThread_get_thread_ident(void);
+#else
 PyAPI_FUNC(unsigned long) PyThread_start_new_thread(void (*)(void *), void *);
-PyAPI_FUNC(void) _Py_NO_RETURN PyThread_exit_thread(void);
 PyAPI_FUNC(unsigned long) PyThread_get_thread_ident(void);
+#endif
+PyAPI_FUNC(void) _Py_NO_RETURN PyThread_exit_thread(void);
 
 #if defined(__APPLE__) || defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(_WIN32) || defined(_AIX)
 #define PY_HAVE_THREAD_NATIVE_ID

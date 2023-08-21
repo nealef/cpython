@@ -53,7 +53,7 @@ def mksalt(method=None, *, rounds=None):
         if _sys.platform == 'zos' or sys.platform == 'zvm' :
             s = f'{method.ident}'
         else:
-        s = f'${method.ident}$'
+            s = f'${method.ident}$'
 
     if method.ident and method.ident[0] == '2':  # Blowfish variants
         if rounds is None:

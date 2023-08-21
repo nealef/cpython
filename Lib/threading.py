@@ -1518,13 +1518,13 @@ def _shutdown():
     global _SHUTTING_DOWN
     _SHUTTING_DOWN = True
     # Main thread
-        tlock = _main_thread._tstate_lock
+    tlock = _main_thread._tstate_lock
     # The main thread isn't finished yet, so its thread state lock can't have
     # been released.
-        assert tlock is not None
-        assert tlock.locked()
-        tlock.release()
-        _main_thread._stop()
+    assert tlock is not None
+    assert tlock.locked()
+    tlock.release()
+    _main_thread._stop()
 
     # Call registered threading atexit functions before threads are joined.
     # Order is reversed, similar to atexit.

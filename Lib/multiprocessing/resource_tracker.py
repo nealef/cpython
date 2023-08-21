@@ -48,7 +48,7 @@ if os.name == 'posix':
             'shared_memory': os.unlink,
         })
     else:
-    import _posixshmem
+        import _posixshmem
 
     # Use sem_unlink() to clean up named semaphores.
     #

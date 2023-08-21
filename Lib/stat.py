@@ -39,7 +39,7 @@ def S_IFMT(mode):
     if sys.platform == 'zos' or sys.platform == 'zvm':
         return mode & 0xFF000000
     else:
-    return mode & 0o170000
+        return mode & 0o170000
 
 # Constants used as S_IFMT() for various file types
 # (not all are implemented on all systems)
@@ -54,13 +54,13 @@ if sys.platform == 'zos' or sys.platform == 'zvm':
     S_IFLNK = 0x05000000
     S_IFSOCK= 0x07000000
 else:
-S_IFDIR  = 0o040000  # directory
-S_IFCHR  = 0o020000  # character device
-S_IFBLK  = 0o060000  # block device
-S_IFREG  = 0o100000  # regular file
-S_IFIFO  = 0o010000  # fifo (named pipe)
-S_IFLNK  = 0o120000  # symbolic link
-S_IFSOCK = 0o140000  # socket file
+    S_IFDIR  = 0o040000  # directory
+    S_IFCHR  = 0o020000  # character device
+    S_IFBLK  = 0o060000  # block device
+    S_IFREG  = 0o100000  # regular file
+    S_IFIFO  = 0o010000  # fifo (named pipe)
+    S_IFLNK  = 0o120000  # symbolic link
+    S_IFSOCK = 0o140000  # socket file
 # Fallbacks for uncommon platform-specific constants
 S_IFDOOR = 0
 S_IFPORT = 0

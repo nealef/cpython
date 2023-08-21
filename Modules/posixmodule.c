@@ -5092,12 +5092,37 @@ os_uname_impl(PyObject *module)
     PyStructSequence_SET_ITEM(value, i, o); \
     } \
 
+#ifdef __MVS__
+    /*
+     * The z/VM utsname structure is much larger than z/OS
+     */
+    if (strcmp(u.sysname, "z/VM") == 0) {
+        SET(0, u.sysname);
+        SET(1, u.nodename);
+        SET(2, u.release);
+        SET(3, u.version);
+        SET(4, u.machine);
+    } else {
+        struct zos_utsname { 
+            char sysname[16];
+            char nodename[32];
+            char release[8];
+            char version[8];
+            char machine[16];
+        } *zos_uts = (struct zos_utsname *) &u;
+        SET(0, zos_uts->sysname);
+        SET(1, zos_uts->nodename);
+        SET(2, zos_uts->release);
+        SET(3, zos_uts->version);
+        SET(4, zos_uts->machine);
+    }
+#else
     SET(0, u.sysname);
     SET(1, u.nodename);
     SET(2, u.release);
     SET(3, u.version);
     SET(4, u.machine);
-
+#endif
 #undef SET
 
     return value;

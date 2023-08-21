@@ -1233,11 +1233,11 @@ class MultiLoopChildWatcher(AbstractChildWatcher):
     def close(self):
         self._callbacks.clear()
         if self._saved_sighandler is not None:
-        handler = signal.getsignal(signal.SIGCHLD)
+            handler = signal.getsignal(signal.SIGCHLD)
             # add_signal_handler() sets the handler to _sighandler_noop.
             if handler != _sighandler_noop:
-            logger.warning("SIGCHLD handler was changed by outside code")
-        else:
+                 logger.warning("SIGCHLD handler was changed by outside code")
+            else:
                 loop = self._loop
                 # This clears the wakeup file descriptor if necessary.
                 loop.remove_signal_handler(signal.SIGCHLD)

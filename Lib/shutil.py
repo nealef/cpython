@@ -17,6 +17,9 @@ import fnmatch
 import collections
 import errno
 
+if sys.platform == 'zos' or sys.platform == 'zvm':
+    import zos_util
+
 try:
     import zlib
     del zlib
@@ -211,18 +214,18 @@ def copyfileobj(fsrc, fdst, length=0):
         fdst_write(buf)
         prev_buf = buf
 
-    if sys.platform == 'zos' and (first_buf or prev_buf) and hasattr(fdst, 'name'):
+    if sys.platform == 'zos' or sys.platform == 'zvm' and (first_buf or prev_buf) and hasattr(fdst, 'name'):
         fdst.flush()
-        ccsid = os.get_tagging(first_buf[:64])
+        ccsid = zos_util.get_tagging(first_buf[:64])
 
         if ccsid > 0:
-            os.set_tagging(fdst.name, ccsid)
+            zos_util.set_tagging(fdst.name, ccsid)
         elif prev_buf:
-            ccsid = os.get_tagging(prev_buf[-64:])
-            os.set_tagging(fdst.name, ccsid)
+            ccsid = zos_util.get_tagging(prev_buf[-64:])
+            zos_util.set_tagging(fdst.name, ccsid)
         elif len(first_buf) > 64:
-            ccsid = os.get_tagging(first_buf[-64:])
-            os.set_tagging(fdst.name, ccsid)
+            ccsid = zos_util.get_tagging(first_buf[-64:])
+            zos_util.set_tagging(fdst.name, ccsid)
 
         if hasattr(fsrc, 'zos_filemode'):
             os.chmod(fdst.name, fsrc.zos_filemode)

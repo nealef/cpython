@@ -95,9 +95,9 @@ class zipimporter(_bootstrap_external._LoaderBasics):
                         raise ZipImportError('not a Zip file', path=path)
                 else:
                 # it exists
-                if (st.st_mode & 0o170000) != 0o100000:  # stat.S_ISREG
-                    # it's a not file
-                    raise ZipImportError('not a Zip file', path=path)
+                    if (st.st_mode & 0o170000) != 0o100000:  # stat.S_ISREG
+                        # it's a not file
+                        raise ZipImportError('not a Zip file', path=path)
                 break
 
         try:

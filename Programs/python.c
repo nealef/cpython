@@ -39,8 +39,9 @@ main(int argc, char **argv)
     _ENTRY hdlr;
     _INT4 token;   
 
-	asm (" basr %0,0\n" : "=r" (here));
-	fprintf(stderr,"here: %p\n",here);
+	asm (" basr %0,0\n" 
+         : "=r" (here));
+	fprintf(stderr,"here: %p\n",((uintptr_t)here^0x80000000));
     sa.sa_flags = SA_SIGINFO;
     sigemptyset(&sa.sa_mask);
     sa.sa_sigaction = handler;
@@ -54,8 +55,6 @@ main(int argc, char **argv)
                                                                     
     CEEHDLR(&hdlr, &token, &fc);                         
                                                                        
-    printf("Established LE Handler at %p\n",&abendHandler); 
-
     return Py_BytesMain(argc, argv);
 }
 #endif
