@@ -811,7 +811,6 @@ cmath_sqrt_impl(PyObject *module, Py_complex z)
     double s,d;
     double ax, ay;
 
-    printf("%s:%d\n",__func__,__LINE__);
     SPECIAL_VALUE(z, sqrt_special_values);
 
     if (z.real == 0. && z.imag == 0.) {
@@ -820,25 +819,17 @@ cmath_sqrt_impl(PyObject *module, Py_complex z)
         return r;
     }
 
-    printf("%s:%d\n",__func__,__LINE__);
     ax = fabs(z.real);
-    printf("%s:%d\n",__func__,__LINE__);
     ay = fabs(z.imag);
-    printf("%s:%d\n",__func__,__LINE__);
 
     if (ax < DBL_MIN && ay < DBL_MIN && (ax > 0. || ay > 0.)) {
         /* here we catch cases where hypot(ax, ay) is subnormal */
-    printf("%s:%d\n",__func__,__LINE__);
         ax = ldexp(ax, CM_SCALE_UP);
-    printf("%s:%d\n",__func__,__LINE__);
         s = ldexp(sqrt(ax + hypot(ax, ldexp(ay, CM_SCALE_UP))),
                   CM_SCALE_DOWN);
-    printf("%s:%d\n",__func__,__LINE__);
     } else {
         ax /= 8.;
-    printf("%s:%d\n",__func__,__LINE__);
         s = 2.*sqrt(ax + hypot(ax, ay/8.));
-    printf("%s:%d\n",__func__,__LINE__);
     }
     d = ay/(2.*s);
 
