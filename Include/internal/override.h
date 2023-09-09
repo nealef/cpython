@@ -7,89 +7,20 @@
 #include <unistd.h>
 #include <ctype.h>
 
-extern ssize_t __write_a(int, const void *, size_t);
-extern ssize_t __read_a(int, void *, size_t);
-extern int __close_a(int);
-extern int __getc_a(FILE *);
-extern int __ungetc_a(int, FILE *);
-#pragma map(__getc_a, "GETCOVRA")
-#pragma map(__write_a, "WRITOVRA")
-#pragma map(__read_a, "READOVRA")
-#pragma map(__close_a, "CLOSOVRA")
-#pragma map(__ungetc_a, "UGTCOVRA")
-extern char *writeOverride;
-extern char *readOverride;
+#pragma map(close, "CLOSOVRA")
+#pragma map(read, "READOVRA")
+#pragma map(write, "WRITOVRA")
+#pragma map(fgetc, "FGETOVRA")
+#pragma map(getc, "GETCOVRA")
+#pragma map(getchar, "GTCHOVRA")
+#pragma map(ungetc, "UGETCOVRA")
 
-static inline ssize_t
-write_override(int fd, const void *buf, size_t len)
-{
-    if (__write_a != NULL) {
-        return __write_a(fd, buf, len);
-    } else
-        return write(fd, buf, len);
-}
+void __initASCIIlib_a(void);
 
-static inline ssize_t
-read_override(int fd, void *buf, size_t len)
-{
-    if (__read_a != NULL) {
-        return __read_a(fd, buf, len);
-    } else
-        return read(fd, buf, len);
-}
-
-static inline int
-close_override(int fd)
-{
-    if (__close_a != NULL) {
-        return __close_a(fd);
-    } else
-        return close(fd);
-}
-
-static inline int
-getchar_override()
-{
-    if (__getc_a != NULL) {
-        return __getc_a(stdin);
-    } else
-        return getchar();
-}
-
-static inline int
-getc_override(FILE *s)
-{
-    if (__getc_a != NULL) {
-        return __getc_a(s);
-    } else
-        return getc(s);
-}
-
-static inline int
-ungetc_override(int c, FILE *s)
-{
-    if (__ungetc_a != NULL) {
-        return __ungetc_a(c, s);
-    } else
-        return ungetc(c, s);
-}
-
-static inline int
-fgetc_override(FILE *s)
-{
-    if (__getc_a != NULL) {
-        return __getc_a(s);
-    } else
-        return fgetc(s);
-}
-
-#define write(a,b,c) write_override(a,b,c)
-#define read(a,b,c) read_override(a,b,c)
-#define close(a) close_override(a)
-#define getchar() getchar_override()
-#define getc(a) getc_override(a)
-#define fgetc(a) fgetc_override(a)
-#define ungetc(a,b) ungetc_override(a,b)
+#ifdef getchar
+# undef getchar
+# undef getc
+#endif
 
 #undef isalnum
 #undef isalpha

@@ -13,6 +13,7 @@ Py_GetPlatform(void)
 {
     if (memcmp(PLATFORM, "os390", 4) == 0) {
         struct utsname uts;
+
         if (uname(&uts) == 0) {
             if (memcmp(uts.sysname, "OS/390", 6) == 0)
                 return "zos";

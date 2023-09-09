@@ -39,6 +39,9 @@ gmon.out
 
 *.x
 *.exe
+*.dbg
+CEEDUMP.*
+*.pax
 !Lib/distutils/command/*.exe
 
 # Ignore core dumps... but not Tools/msi/core/ or the like.

@@ -4,7 +4,7 @@
 PREFIX="/usr/local"
  
  
-OFLAGS="-O"
+OFLAGS="-O3"
 QFLAGS="-qlanglvl=extended:extc89:extc99 -qxplink -qdll -qenum=int -qexportall -qascii \
 	        -qfloat=ieee -qlongname -q32 -qseverity=e=CCN3296 -qasm"
 DFLAGS="-D_ALL_SOURCE -D_EXT -D_UNIX03_SOURCE -D_XOPEN_SOURCE_EXTENDED=1 -D__VM__ \
@@ -25,8 +25,8 @@ CXXFLAGS="-+ ${OFLAGS} ${QXXFLAGS} ${DFLAGS} ${INCFLAGS}"
 QLFLAGS="-qxplink -qdll"
 LDFLAGS="${OFLAGS} ${QLFLAGS} -L/usr/local/lib /usr/local/lib/libncurses.x -lz"
 CPPFLAGS="${DFLAGS}"
-LDSHARED="xlc -Wl,dll -q32 -qxplink"
-BLDSHARED="xlc -Wl,dll -q32 -qxplink"
+LDSHARED="xlc -Wl,dll -q32 -qxplink /usr/local/lib/liboverride.x"
+BLDSHARED="xlc -Wl,dll -q32 -qxplink /usr/local/lib/liboverride.x"
 LDCXXSHARED="xlc"
 SHLIBS="/usr/local/lib/override.x /usr/local/lib/libncurses.x"
  
@@ -109,12 +109,13 @@ export ac_cv_header_poll='no'
 export ax_cv_c_float_words_bigendian=yes 
 export _C89_CCMODE=1
 export SHELL=/rocket/conda/bin/bash
-./configure --prefix=${PREFIX} CC="${CC}" CFLAGS="${CFLAGS}" CXX="${CXX}" \
+${SHELL} ./configure --prefix=${PREFIX} CC="${CC}" CFLAGS="${CFLAGS}" CXX="${CXX}" \
 	            CXXFLAGS="${CXXFLAGS}" LDFLAGS="${LDFLAGS}" CPP="${CPP}" \
 		                CPPFLAGS="${CPPFLAGS}" LDSHARED="${LDSHARED}" \
                         BLDSHARED="${BLDSHARED}" SHLIBS="${SHLIBS}" SHELL="${SHELL}" \
                             --disable-test-modules \
 				            --x-libraries=${X_LIBRARIES} \
+                            --with-openssl=/usr/local \
                             --enable-shared --without-readline
  
 echo "#include <override.h>" >>pyconfig.h

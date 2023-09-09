@@ -249,6 +249,7 @@ class UnixCCompiler(CCompiler):
                     # remove the existing python.x in ld_args
                     ld_args = [item for item in ld_args if item != pythonx]
                     ld_args.extend(["-Wl,dll", new_pythonx])
+                    ld_args.extend(["/usr/local/lib/liboverride.x"])
 
                     # Set for cross builds explicitly
                     xx = os.environ
@@ -258,7 +259,7 @@ class UnixCCompiler(CCompiler):
                         host = sys.platform
                     if host == "zvm" : 
                         ld_args.extend(["-q32"])
-                        ld_args.extend(["-Wl,let=8"])
+                        ld_args.extend(["-ltag"])
                     else :
                         ld_args.extend(["-q64"])
 
