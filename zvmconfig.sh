@@ -4,13 +4,13 @@
 PREFIX="/usr/local"
  
  
-OFLAGS="-O3"
+OFLAGS="-O1"
 QFLAGS="-qlanglvl=extended:extc89:extc99 -qxplink -qdll -qenum=int -qexportall -qascii \
-	        -qfloat=ieee -qlongname -q32 -qseverity=e=CCN3296 -qasm"
+	        -qfloat=ieee -qlongname -q32 -qseverity=e=CCN3296 -qasm -qstackprotect"
 DFLAGS="-D_ALL_SOURCE -D_EXT -D_UNIX03_SOURCE -D_XOPEN_SOURCE_EXTENDED=1 -D__VM__ \
 	        -D_ISOC99_SOURCE -DEBCDIC -D_OE_SOCKETS -D_OPEN_MSGQ_EXT -D_OPEN_SYS \
-		        -D_OPEN_THREADS=2 -D_POSIX_SOURCE -D_UNIX03_SOURCE -D_LONGMAP \
-			        -D_UNIX03_WITHDRAWN -D_XOPEN_SOURCE=600 \
+		        -D_POSIX_SOURCE -D_UNIX03_SOURCE -D_LONGMAP \
+			        -D_UNIX03_WITHDRAWN -D_XOPEN_SOURCE=600 -D_ENHANCED_ASCII_EXT=0xFFFFFFFF \
 				-I/usr/local/include -I/usr/local/include/ncurses"
  
 INCFLAGS="-qnosearch -I/usr/local/include -I/usr/local/include/ncurses -I/usr/include"
@@ -19,7 +19,7 @@ CC="xlc ${INCFLAGS}"
 CXX="xlc ${INCFLAGS}"
 CPP="xlc -E ${INCFLAGS}"
 QXXFLAGS="-qlanglvl=extended -qxplink -qdll -qenum=int -qexportall \
-	          -qfloat=ieee -qlongname -qascii"
+	          -qfloat=ieee -qlongname -qascii -qstackprotect"
 CXXFLAGS="-+ ${OFLAGS} ${QXXFLAGS} ${DFLAGS} ${INCFLAGS}"
  
 QLFLAGS="-qxplink -qdll"
@@ -90,15 +90,15 @@ export ac_cv_func_setreuid='no'
 export ac_cv_func_setvbuf='no'
 export ac_cv_func_sigafillset='no'
 export ac_cv_func_sigaltstack='no'
-export ac_cv_func_siginterrupt='no'
+export ac_cv_func_siginterrupt='yes'
 export ac_cv_func_sigrelse='no'
 export ac_cv_func_sigtimedwait='no'
 export ac_cv_func_sigwaitinfo='no'
-export ac_cv_func_strftime='no'
+export ac_cv_func_strftime='yes'
 export ac_cv_func_symlinkat='no'
 export ac_cv_func_sync='no'
 export ac_cv_func_unlinkat='no'
-export ac_cv_func_truncate='no'
+export ac_cv_func_truncate='yes'
 export ac_cv_func_wait3='no'
 export ac_cv_func_wait4='no'
 export ac_cv_have_getc_unlocked=`false`

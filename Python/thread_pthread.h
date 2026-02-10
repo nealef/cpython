@@ -681,11 +681,20 @@ PyThread_acquire_lock_timed(PyThread_type_lock lock, PY_TIMEOUT_T microseconds,
                     status = pthread_cond_timedwait(
                         &thelock->lock_released,
                         &thelock->mut, &abs);
+#if !defined(__MVS__) && !defined(__VM__)
                     if (status == 1) {
                         break;
                     }
                     if (status == ETIMEDOUT)
                         break;
+#else
+                    if (status == 0) {
+                        break;
+                    }
+                    status = errno;
+                    if ((errno == ETIMEDOUT) || (errno == EAGAIN))
+                        break;
+#endif
                     CHECK_STATUS_PTHREAD("pthread_cond_timedwait");
                 }
                 else {

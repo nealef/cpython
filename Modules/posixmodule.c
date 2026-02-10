@@ -13232,11 +13232,16 @@ os_get_terminal_size_impl(PyObject *module, int fd)
 
 #ifdef TERMSIZE_USE_IOCTL
     {
+# ifndef __VM__
         struct winsize w;
         if (ioctl(fd, TIOCGWINSZ, &w))
             return PyErr_SetFromErrno(PyExc_OSError);
         columns = w.ws_col;
         lines = w.ws_row;
+# else
+        columns = 80;
+        lines = 24;
+# endif
     }
 #endif /* TERMSIZE_USE_IOCTL */
 
