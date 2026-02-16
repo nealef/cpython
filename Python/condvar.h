@@ -71,12 +71,21 @@ PyCOND_TIMEDWAIT(PyCOND_T *cond, PyMUTEX_T *mut, long long us)
     struct timespec abs;
     _PyThread_cond_after(us, &abs);
     int ret = pthread_cond_timedwait(cond, mut, &abs);
+#if !defined(__MVS__) && !defined(__VM__)
     if (ret == ETIMEDOUT) {
         return 1;
     }
     if (ret) {
         return -1;
     }
+#else
+    if (ret != 0) {
+        if ((errno == ETIMEDOUT) || (errno == EAGAIN))
+            return 1;
+        else 
+            return -1;
+    }
+#endif
     return 0;
 }
 

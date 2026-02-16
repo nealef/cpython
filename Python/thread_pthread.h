@@ -691,9 +691,13 @@ PyThread_acquire_lock_timed(PyThread_type_lock lock, PY_TIMEOUT_T microseconds,
                     if (status == 0) {
                         break;
                     }
-                    status = errno;
-                    if ((errno == ETIMEDOUT) || (errno == EAGAIN))
+                    if ((errno == ETIMEDOUT) || (errno == EAGAIN)) {
+                        status = ETIMEDOUT;
                         break;
+                    } else if (errno == EINTR)
+                        continue;
+                    else
+                        status = errno;
 #endif
                     CHECK_STATUS_PTHREAD("pthread_cond_timedwait");
                 }
