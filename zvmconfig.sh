@@ -6,7 +6,7 @@ PREFIX="/usr/local"
  
 OFLAGS="-O1"
 QFLAGS="-qlanglvl=extended:extc89:extc99 -qxplink -qdll -qenum=int -qexportall -qascii \
-	        -qfloat=ieee -qlongname -q32 -qseverity=e=CCN3296 -qasm -qstackprotect"
+	        -qfloat=ieee -qlongname -q32 -qseverity=e=CCN3296 -qasm"
 DFLAGS="-D_ALL_SOURCE -D_EXT -D_UNIX03_SOURCE -D_XOPEN_SOURCE_EXTENDED=1 -D__VM__ \
 	        -D_ISOC99_SOURCE -DEBCDIC -D_OE_SOCKETS -D_OPEN_MSGQ_EXT -D_OPEN_SYS \
 		        -D_POSIX_SOURCE -D_UNIX03_SOURCE -D_LONGMAP \

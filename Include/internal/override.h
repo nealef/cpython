@@ -14,6 +14,10 @@
 #pragma map(getc, "GETCOVRA")
 #pragma map(getchar, "GTCHOVRA")
 #pragma map(ungetc, "UGETCOVRA")
+#pragma map(getwd, "GETWDOVRA")
+#pragma map(truncate, "TRUNCOVRA")
+#pragma map(select_ovr, "SLCTOVRA")
+#define select(n, r, w, x, t) select_ovr(n, r, w, x, t)
 
 void __initASCIIlib_a(void);
 
