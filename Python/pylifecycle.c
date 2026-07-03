@@ -2952,7 +2952,11 @@ PyOS_setsig(int sig, PyOS_sighandler_t handler)
     /* Using SA_ONSTACK is friendlier to other C/C++/Golang-VM code that
      * extension module or embedding code may use where tiny thread stacks
      * are used.  https://bugs.python.org/issue43390 */
+#ifdef HAVE_SIGALTSTACK
     context.sa_flags = SA_ONSTACK;
+#else
+    context.sa_flags = 0;
+#endif
     if (sigaction(sig, &context, &ocontext) == -1)
         return SIG_ERR;
     return ocontext.sa_handler;

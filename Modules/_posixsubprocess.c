@@ -812,9 +812,9 @@ child_spawn(char *const exec_array[],
     for (i = 0; exec_array[i] != NULL; ++i) {
         const char *executable = exec_array[i];
 
-        pid = spawn(executable, 3, fdMap, &inherit,
-                    (const char **) argv, 
-                    (const char **) envp);
+        pid = spawnp(executable, 3, fdMap, &inherit,
+                     (const char **) argv, 
+                     (const char **) envp);
         if (pid > 0) {
             return pid;
         }
@@ -824,7 +824,6 @@ child_spawn(char *const exec_array[],
         }
     }
 
-fprintf(stderr, "%s:%d - err: %d\n", __func__, __LINE__, saved_errno);
     /* Report the first exec error, not the last. */
     if (saved_errno)
         errno = saved_errno;
@@ -833,7 +832,6 @@ error:
     saved_errno = errno;
     const char *dummy[2] = { "/bin/echo", NULL };
     pid = spawn((const char *)dummy[0], 0, NULL, NULL, dummy, (const char **) envp);
-fprintf(stderr, "errpid: %d\n", pid);
     /* Report the posix error to our parent process. */
     /* We ignore all write() return values as the total size of our writes is
        less than PIPEBUF and we cannot do anything about an error anyways.

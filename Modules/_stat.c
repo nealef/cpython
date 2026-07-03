@@ -354,6 +354,9 @@ filetype(mode_t mode)
     if (S_ISREG(mode))  return '-';
     if (S_ISDIR(mode))  return 'd';
     if (S_ISLNK(mode))  return 'l';
+#ifdef __VM__
+    if (S_ISVMEXTL(mode))  return 'l';
+#endif
     /* special files */
     if (S_ISBLK(mode))  return 'b';
     if (S_ISCHR(mode))  return 'c';

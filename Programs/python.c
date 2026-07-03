@@ -16,6 +16,7 @@ main(int argc, char **argv)
 #if defined(__MVS_) || defined(__VM__)
     __initASCIIlib_a();
 #endif
+
     return Py_BytesMain(argc, argv);
 }
 #endif

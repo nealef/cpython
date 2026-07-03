@@ -13514,7 +13514,7 @@ DirEntry_dealloc(DirEntry *entry)
 /* Forward reference */
 static int
 DirEntry_test_mode(PyTypeObject *defining_class, DirEntry *self,
-                   int follow_symlinks, unsigned short mode_bits);
+                   int follow_symlinks, unsigned int mode_bits);
 
 /*[clinic input]
 os.DirEntry.is_symlink -> bool
@@ -13654,7 +13654,7 @@ os_DirEntry_stat_impl(DirEntry *self, PyTypeObject *defining_class,
 /* Set exception and return -1 on error, 0 for False, 1 for True */
 static int
 DirEntry_test_mode(PyTypeObject *defining_class, DirEntry *self,
-                   int follow_symlinks, unsigned short mode_bits)
+                   int follow_symlinks, unsigned int mode_bits)
 {
     PyObject *stat = NULL;
     PyObject *st_mode = NULL;
@@ -13695,6 +13695,7 @@ DirEntry_test_mode(PyTypeObject *defining_class, DirEntry *self,
             goto error;
 
         mode = PyLong_AsLong(st_mode);
+
         if (mode == -1 && PyErr_Occurred())
             goto error;
         Py_CLEAR(st_mode);
