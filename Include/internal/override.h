@@ -18,6 +18,9 @@
 #pragma map(truncate, "TRUNCOVRA")
 #pragma map(select_ovr, "SLCTOVRA")
 #define select(n, r, w, x, t) select_ovr(n, r, w, x, t)
+#define dup2(a,b) __dup2_a(a,b)
+#define dup(a) __dup_a(a)
+#define clock() __clock_ovr()
 
 void __initASCIIlib_a(void);
 
@@ -28,6 +31,7 @@ void __initASCIIlib_a(void);
 
 #undef isalnum
 #undef isalpha
+#undef isblank
 #undef iscntrl
 #undef isdigit
 #undef isgraph
@@ -40,6 +44,7 @@ void __initASCIIlib_a(void);
 
 #define isalnum(c)  (__isalnum_a)(c)
 #define isalpha(c)  (__isalpha_a)(c)
+#define isblank(c)  (__isblank_a)(c)
 #define iscntrl(c)  (__iscntrl_a)(c)
 #define isdigit(c)  (__isdigit_a)(c)
 #define isgraph(c)  (__isgraph_a)(c)

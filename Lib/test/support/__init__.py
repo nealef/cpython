@@ -758,7 +758,7 @@ def run_with_locale(catstr, *locales):
                     # for when it's an entire test-suite running the locale
                     if sys.platform == 'zos' or sys.platform == 'zvm':
                         try:
-                    locale.setlocale(category, orig_locale)
+                            locale.setlocale(category, orig_locale)
                         except locale.Error:
                             pass
                     else:

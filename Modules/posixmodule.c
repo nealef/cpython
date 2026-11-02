@@ -2407,7 +2407,18 @@ _pystat_fromstructstat(PyObject *module, STRUCT_STAT *st)
     if (v == NULL)
         return NULL;
 
+#ifndef __VM__
     PyStructSequence_SET_ITEM(v, 0, PyLong_FromLong((long)st->st_mode));
+#else
+    if (S_ISVMEXTL_MEL(st->st_mode))
+        PyStructSequence_SET_ITEM(v, 0, PyLong_FromLong((long)S_IFDIR));
+    else if (S_ISVMEXTL_DATA(st->st_mode))
+        PyStructSequence_SET_ITEM(v, 0, PyLong_FromLong((long)S_IFREG));
+    else if (S_ISVMEXTL_EXEC(st->st_mode))
+        PyStructSequence_SET_ITEM(v, 0, PyLong_FromLong((long)S_IFREG));
+    else
+        PyStructSequence_SET_ITEM(v, 0, PyLong_FromLong((long)st->st_mode));
+#endif
     Py_BUILD_ASSERT(sizeof(unsigned long long) >= sizeof(st->st_ino));
     PyStructSequence_SET_ITEM(v, 1, PyLong_FromUnsignedLongLong(st->st_ino));
 #ifdef MS_WINDOWS
